@@ -17,3 +17,4 @@ retrying
 async-timeout
 pickleshare
 ta
+backtesting

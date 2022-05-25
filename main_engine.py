@@ -17,6 +17,9 @@ import hashlib
 from datetime import datetime, timedelta
 import datetime as dt
 import ta
+from backtesting import Backtest, Strategy
+from backtesting.lib import crossover
+from backtesting.test import SMA, GOOG
 
 base_api = "https://api.binance.com"
 all_data = {}
@@ -639,7 +642,10 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14):
     )
 
     # PostionPR Strategy
-    clean_data["PositionPR"] = np.where(clean_data["psar"] > clean_data["close"], -1, 1)
+    dataset_pr = set_up_full_data(symbol, fai=fai, vwap=0, win=win)
+    # set up a separate dataset for PositionPr strategy.
+    clean_data["PositionPR"] = np.where(dataset_pr["psar"] > dataset_pr["close"], -1, 1)
+    clean_data["psar"] = dataset_pr["psar"].copy()
 
     # prX Strategy
     clean_data["prX"] = np.where(
@@ -701,7 +707,7 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14):
 
 
 my_symbols = [
-    "BTCUSDT15m",
+    "BTCUSDT1h",
     "ETHUSDT1h",
     "BNBUSDT1h",
     "LUNABUSD1h",
@@ -711,5 +717,5 @@ my_symbols = [
 ]
 print(all_data)
 x = calc_all(my_symbols[0], 2.5, 48, vwap=1, win=24)
-print(x[0][["weighted_close", "Strategy2", "prXX", "PositionPR", "cmf_ii"]][-50:])
+print(x[0][["Strategy2", "prXX", "PositionPR", "cmf_ii", "psar"]][-200:-150])
 print(all_data)
