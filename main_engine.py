@@ -22,6 +22,8 @@ base_api = "https://api.binance.com"
 all_data = {}
 exchange_data = ""
 
+# All : future work should take speed of executions into account, future work, in itself, can also be to speed up execution time
+
 # General Functions
 def get_symbol_interval(symbol):
     """Given a 'symbol' eg -> 'BTCUSDT1h'
@@ -103,9 +105,12 @@ class Fin_Indicator:
         smas = weighted_close.ewm(span=period, adjust=False).mean()
         return smas
 
-    def ema(self, period):
-        weighted_close = self.weighted_close_fxn()
-        emas = weighted_close.ewm(span=period, adjust=False).mean()
+    def ema(self, period, weights=0):
+        if weights:
+            close = self.weighted_close_fxn()
+        else:
+            close = self.close
+        emas = close.ewm(span=period, adjust=False).mean()
         return emas
 
     def vwap(self, df):
@@ -119,12 +124,21 @@ class Fin_Indicator:
         df = df.groupby(df.index.date, group_keys=False).apply(self.vwap)
         return df["vwap"]
 
-    def macd(self):
-        weighted_close = self.weighted_close_fxn()
-        sma1 = weighted_close.ewm(span=12, adjust=False).mean()
-        sma2 = weighted_close.ewm(span=26, adjust=False).mean()
+    def macd(self, int1, int2, macdint, weights=0):
+        """int1 - interval/period for the first sma
+        int2 - interval for the second sma
+        macdint - interval for the macd
+        weights - to use weighted close or not.
+        """
+        # intervals to be replaced with a function that determines the best interval to use, as well as what attribute to use between com, halflife and span(span is used for now as is below): future work
+        if weights:
+            close = self.weighted_close_fxn()
+        else:
+            close = self.close
+        sma1 = close.ewm(span=int1, adjust=False).mean()
+        sma2 = close.ewm(span=int2, adjust=False).mean()
         dcam = sma1 - sma2
-        signalmacd = dcam.ewm(span=9, adjust=False).mean()
+        signalmacd = dcam.ewm(span=macdint, adjust=False).mean()
         macdhist = dcam - signalmacd
         return dcam, signalmacd, macdhist
 
@@ -408,7 +422,9 @@ def set_up_data(symbol, vwap=1, win=24):
     return dataset
 
 
-def set_up_full_data(symbol, vwap=None, win=24):
+def set_up_full_data(
+    symbol, fai=0.0011, afmax=0.2, vwap=None, win=14, typ="weighted_close"
+):
     """Sets up data table to be used with both default values and some values from indicators"""
     # To replace hard coded values with values from optional arguments: future work
     dataset = set_up_data(symbol, vwap=vwap, win=win)
@@ -418,18 +434,18 @@ def set_up_full_data(symbol, vwap=None, win=24):
     dataset["vwap"] = my_indicators.return_vwap()
     dataset["SMA1"] = my_indicators.sma(period=12)
     dataset["SMA2"] = my_indicators.sma(period=24)
-    upperband, middleband, lowerband = my_indicators.bbands(typ="weighted_close")
+    upperband, middleband, lowerband = my_indicators.bbands(typ=typ)
     dataset["BBupperband"] = upperband
     dataset["BBlowerband"] = lowerband
     dataset["BBmiddleband"] = middleband
     dataset["EMASpan1"] = my_indicators.ema(period=12)
     dataset["EMASpan2"] = my_indicators.ema(period=24)
-    dataset["psar"] = my_indicators.psar()
+    dataset["psar"] = my_indicators.psar(iaf=fai, maxaf=afmax)
     (
         dataset["macd"],
         dataset["macdsignal"],
         dataset["macdhist"],
-    ) = my_indicators.macd()
+    ) = my_indicators.macd(int1=6, int2=24, macdint=9)
     dataset["rsi"] = my_indicators.rsi(window_length=24)
     dataset["atr"] = my_indicators.atr(n=7)
     dataset["mom"] = my_indicators.mom(period=24)
@@ -525,4 +541,175 @@ def trail_stop(symbol, multiplier, vwap=None, win=14):
     return trail_stop_df["Position"], trail_stop_df["atr2"]
 
 
+# Main Predictor
 
+
+def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14):
+    """Returns a dataset computed with predicted positions and the name of the best strategy column
+
+    stop: trail stop multiplier value
+    win: window period for most indicators calculation
+    fai: is iaf - increment acceleration factor
+    """
+    # set up dataset
+    dataset = set_up_full_data(symbol, fai=fai, vwap=vwap, win=win)
+
+    # initialize the Fin_Indicator class
+    my_indicators = Fin_Indicator(dataset)
+
+    # create a copy of the dataset for data manipulation
+    dataset_copy = dataset.copy()
+
+    # set up a new dataframe to hold values for the strategies and other useful data
+    clean_data = pd.DataFrame(
+        dataset[
+            [
+                "close",
+                "weighted_close",
+                "closeTime",
+                "low",
+                "high",
+                "closecheck",
+                "opencheck",
+                "vwap",
+                "open",
+                "macd",
+                "macdsignal",
+                "macdhist",
+                "psar",
+                "BBmiddleband",
+            ]
+        ].copy()
+    )
+    (
+        clean_data["kijun_sen"],
+        clean_data["tenkan_sen"],
+        clean_data["chikou_span"],
+        clean_data["senkou_span_a"],
+        clean_data["senkou_span_b"],
+    ) = my_indicators.ichimoku_cloud(kijun_lag=kijun)
+
+    # MACD Strategy
+    #  check EMA Strategy to set up macd and macdsignals using preferred values
+    dataset_copy = dataset.copy()
+
+    dataset_copy["Position"] = np.where(
+        dataset_copy["macd"] > dataset_copy["macdsignal"], 1, -1
+    )
+    dataset_copy["Position"].bfill(inplace=True)
+    dataset_copy["Position"].ffill(inplace=True)
+    dataset_copy["Position"] = pd.Series(
+        np.nan_to_num(dataset_copy["Position"]),
+        index=dataset_copy.index,
+        name="Position",
+    )
+
+    clean_data["PositionMACD"] = dataset_copy["Position"]
+
+    # EMA Strategy
+    dataset_copy = dataset.copy()
+    SMA1 = 6  # interval 1, both intervals to be replaced with a function that determines the best interval to use, as well as what attributes to use between com, halflife and span(span is used for now as is below): future work
+    SMA2 = 28  # interval 2
+
+    dataset_copy["SMA1"] = my_indicators.ema(period=SMA1, weights=1)
+    dataset_copy["SMA2"] = my_indicators.ema(period=SMA2, weights=1)
+
+    dataset_copy["Position"] = np.where(
+        dataset_copy["SMA1"] > dataset_copy["SMA2"], 1, -1
+    )
+    dataset_copy["Position"].bfill(inplace=True)
+    dataset_copy["Position"].ffill(inplace=True)
+    dataset_copy["Position"] = pd.Series(
+        np.nan_to_num(dataset_copy["Position"]),
+        index=dataset_copy.index,
+        name="Position",
+    )
+
+    clean_data["PositionEMA"] = dataset_copy["Position"]
+
+    # trail_stop Strategy and atr value
+    clean_data["trail_stop"], clean_data["atr2"] = trail_stop(symbol, stop)
+
+    # Strategy2 Strategy
+    clean_data["Strategy2"] = np.where((clean_data["PositionEMA"] == 1), 1, np.nan)
+    clean_data["Strategy2"] = np.where(
+        (clean_data["trail_stop"] == -1) & (clean_data["PositionMACD"] == -1),
+        -1,
+        clean_data["Strategy2"],
+    )
+
+    # PostionPR Strategy
+    clean_data["PositionPR"] = np.where(clean_data["psar"] > clean_data["close"], -1, 1)
+
+    # prX Strategy
+    clean_data["prX"] = np.where(
+        (clean_data["Strategy2"] == 1) & (clean_data["PositionPR"] == 1), 1, -1
+    )
+
+    # prXX Strategy
+    clean_data["prXX"] = np.where(
+        (clean_data["prX"] == 1)
+        & (clean_data["low"] < clean_data["BBmiddleband"])
+        & (clean_data["high"] > clean_data["BBmiddleband"])
+        & (clean_data["closecheck"] > clean_data["opencheck"]),
+        1,
+        np.nan,
+    )
+    clean_data["prXX"] = np.where(
+        (clean_data["prX"] == -1)
+        & (clean_data["low"] < clean_data["BBmiddleband"])
+        & (clean_data["high"] > clean_data["BBmiddleband"])
+        & (clean_data["closecheck"] < clean_data["opencheck"]),
+        -1,
+        clean_data["prXX"],
+    )
+
+    # cmf_ii Strategy
+    clean_data["trend_aroon_up"] = ta.trend.aroon_up(
+        close=clean_data["closecheck"], window=12
+    )
+    clean_data["trend_aroon_down"] = ta.trend.aroon_down(
+        close=clean_data["closecheck"], window=12
+    )
+
+    clean_data["cmf_ii"] = np.where(
+        (clean_data["trend_aroon_up"] > clean_data["trend_aroon_down"])
+        & (clean_data["trend_aroon_up"] > 95),
+        1,
+        np.nan,
+    )
+    clean_data["cmf_ii"] = np.where(
+        (clean_data["trend_aroon_up"] < clean_data["trend_aroon_down"])
+        & (clean_data["trend_aroon_down"] > 95),
+        -1,
+        clean_data["cmf_ii"],
+    )
+
+    clean_data["cmf_ii"].ffill(inplace=True)
+
+    clean_data["prXXcmf"] = np.where(
+        (clean_data["prXX"] == 1) & (clean_data["cmf_ii"] == 1), 1, -1
+    )
+
+    # forward and backward fills nan values
+    clean_data.ffill(inplace=True)
+    clean_data.bfill(inplace=True)
+
+    best = "prXX"  # column name for best strategy at the moment.
+
+    return clean_data, best
+
+
+my_symbols = [
+    "BTCUSDT15m",
+    "ETHUSDT1h",
+    "BNBUSDT1h",
+    "LUNABUSD1h",
+    "SOLUSDT1h",
+    "CHZUSDT1h",
+    "SANDUSDT1h",
+]
+print(all_data)
+x = calc_all(my_symbols[0], 2.5, 48, vwap=1, win=24)
+print(x[0][["weighted_close", "Strategy2", "prXX", "PositionPR", "cmf_ii"]][-50:])
+print(all_data)
