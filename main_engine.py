@@ -368,8 +368,8 @@ def set_up_data(symbol, vwap=1, win=24):
     # Explain or simplify code later: future work
     """Sets up data table to be used for predictions with default values"""
     # uncomment later
-    # global all_data
-    # dataset = all_data[symbol].copy()
+    global all_data
+    dataset = all_data[symbol].copy()
 
     # comment later
     path = "/home/ihechi/Documents/Datasheets_and_Datasets/crypto/Bot/"
@@ -706,16 +706,9 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14):
     return clean_data, best
 
 
-my_symbols = [
-    "BTCUSDT1h",
-    "ETHUSDT1h",
-    "BNBUSDT1h",
-    "LUNABUSD1h",
-    "SOLUSDT1h",
-    "CHZUSDT1h",
-    "SANDUSDT1h",
-]
-print(all_data)
-x = calc_all(my_symbols[0], 2.5, 48, vwap=1, win=24)
-print(x[0][["Strategy2", "prXX", "PositionPR", "cmf_ii", "psar"]][-200:-150])
-print(all_data)
+# Backtesting Functions
+def get_my_positions(symbol):
+    clean_data, best = calc_all(symbol, 2.5, 48, fai=0.0011, vwap=0, win=14)
+    predictions = pd.DataFrame(clean_data[best])
+    predictions["positions"] = predictions[best]
+    return pd.Series(predictions["positions"])
