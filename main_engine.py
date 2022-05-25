@@ -20,6 +20,7 @@ import ta
 
 base_api = "https://api.binance.com"
 all_data = {}
+exchange_data = ""
 
 # General Functions
 def get_symbol_interval(symbol):
@@ -30,14 +31,14 @@ def get_symbol_interval(symbol):
         return symbol.replace("30m", ""), "30m"
     elif "1h" in symbol:
         return symbol.replace("1h", ""), "1h"
+    elif "12h" in symbol:
+        return symbol.replace("12h", ""), "12h"
     elif "2h" in symbol:
         return symbol.replace("2h", ""), "2h"
     elif "4h" in symbol:
         return symbol.replace("4h", ""), "4h"
     elif "6h" in symbol:
         return symbol.replace("6h", ""), "6h"
-    elif "12h" in symbol:
-        return symbol.replace("12h", ""), "12h"
     elif "1D" in symbol:
         return symbol.replace("1D", ""), "1D"
     else:
@@ -50,11 +51,11 @@ class Fin_Indicator:
 
     def __init__(self, main_dataset):
         self.dataset = main_dataset.copy()
-        self.open_ = dataset["open"]
-        self.high = dataset["high"]
-        self.low = dataset["low"]
-        self.close = dataset["close"]
-        self.volume = dataset["volume"]
+        self.open_ = self.dataset["open"]
+        self.high = self.dataset["high"]
+        self.low = self.dataset["low"]
+        self.close = self.dataset["close"]
+        self.volume = self.dataset["volume"]
 
     def weighted_close_fxn(self):
         """Returns weighted close values of a given dataset"""
@@ -247,6 +248,8 @@ class Fin_Indicator:
 
 
 # Data Download and Setup
+
+
 def request_download(url, headers=None):
     """Request to get the url passed and returns the response."""
     active = True
@@ -261,15 +264,13 @@ def request_download(url, headers=None):
             res.raise_for_status()
         except requests.exceptions.RequestException as err:
             print(f"Couldn't Get Request: {err}", file=sys.stderr)
-            if res:
-                print(res)
             count += 1
-            if count == 15:
+            if count == 1:
                 print(
                     "Process Terminated, Check Internet Connectivity and Try Again!!!",
                     file=sys.stderr,
                 )
-                return {"status_code": -1}
+                return
             for i in reversed(range(wait_time)):
                 print(f"Retrying in {i}")
                 time.sleep(1)
@@ -287,11 +288,10 @@ def get_klines(symbol, interval, limit=1000):
         base_api + f"/api/v1/klines?symbol={symbol}&limit={limit}&interval={interval}"
     )
     res = request_download(kline_data)
-    print(symbol, " downloaded, now saving...")
-    print(res.status_code)
-    if res.status_code != 200:
+    if (not res) or (res.status_code != 200):
         print("An Error Occured")
         sys.exit(-1)  # change sys exit to -> return { "data": "FAILED GET")
+    print(symbol, " downloaded, now saving...")
     dataset = pd.DataFrame(
         res.json(),
         columns=[
@@ -329,12 +329,38 @@ def download_symbols(symbols, interval="1h"):
         time.sleep(2)
 
 
+def multi_thread_download(my_symbols):
+    """Multi threads the download of multiple symbols"""
+    downloadThreads = []
+    adder = int(len(my_symbols) / 6)
+    v = 0
+    for i in range(0, len(my_symbols), adder):
+        symbols_list_truncated = my_symbols[v : i + adder]
+        downloadThread = threading.Thread(
+            target=download_symbols, args=([symbols_list_truncated])
+        )
+        downloadThreads.append(downloadThread)
+        downloadThread.start()
+        v += adder
+    for downloadThread in downloadThreads:
+        downloadThread.join()
+    print("Done.")
+
+
 def set_up_data(symbol, vwap=1, win=24):
+    # Explain or simplify code later: future work
     """Sets up data table to be used for predictions with default values"""
-    global all_data
-    dataset = all_data[symbol].copy()
+    # uncomment later
+    # global all_data
+    # dataset = all_data[symbol].copy()
+
+    # comment later
+    path = "/home/ihechi/Documents/Datasheets_and_Datasets/crypto/Bot/"
+    pkl_file = open(path + symbol + ".pkl", "rb")
+    dataset = pickle.load(pkl_file)
+    pkl_file.close()
+
     print("setting up", symbol)
-    # dataset.drop(dataset.tail(1).index,inplace=True)
     dataset["openTime"] = pd.to_datetime(dataset["openTime"])
     dataset["closeTime"] = pd.to_datetime(dataset["closeTime"])
     dataset["closecheck"] = pd.to_numeric(dataset["close"], errors="coerce")
@@ -342,6 +368,7 @@ def set_up_data(symbol, vwap=1, win=24):
     dataset["high"] = pd.to_numeric(dataset["high"], errors="coerce")
     dataset["low"] = pd.to_numeric(dataset["low"], errors="coerce")
     dataset["open"] = pd.to_numeric(dataset["close"], errors="coerce")
+    dataset["opencheck"] = pd.to_numeric(dataset["open"], errors="coerce")
     dataset["Close"] = pd.to_numeric(dataset["open"], errors="coerce")
     dataset["High"] = pd.to_numeric(dataset["high"], errors="coerce")
     dataset["Low"] = pd.to_numeric(dataset["low"], errors="coerce")
@@ -357,40 +384,145 @@ def set_up_data(symbol, vwap=1, win=24):
             window=win,
         )
     dataset.set_index("openTime", inplace=True)
+
+    # calculates and sets up heiken data
+    datasets = dataset[["opencheck", "High", "Low", "closecheck"]]
+    datasets.columns = ["Open", "High", "Low", "Close"]
+    datasets_ha = datasets.copy()
+    for i in range(datasets_ha.shape[0]):
+        if i > 0:
+            datasets_ha.loc[datasets_ha.index[i], "Open"] = (
+                datasets["Open"][i - 1] + datasets["Close"][i - 1]
+            ) / 2
+            datasets_ha.loc[datasets_ha.index[i], "Close"] = (
+                datasets["Open"][i]
+                + datasets["Close"][i]
+                + datasets["Low"][i]
+                + datasets["High"][i]
+            ) / 4
+    datasets_ha = datasets_ha.iloc[1:, :]
+    dataset[["heiken_open", "heiken_high", "heiken_low", "heiken_close"]] = datasets_ha[
+        ["Open", "High", "Low", "Close"]
+    ]
+
     return dataset
 
 
 def set_up_full_data(symbol, vwap=None, win=24):
-    """Sets up data table to be used with both default values and values from indicators"""
+    """Sets up data table to be used with both default values and some values from indicators"""
     # To replace hard coded values with values from optional arguments: future work
-    data = set_up_data(symbol, vwap=vwap, win=win)
-    my_indicators = Fin_Indicator(data)
+    dataset = set_up_data(symbol, vwap=vwap, win=win)
+    my_indicators = Fin_Indicator(dataset)
     weighted_close = my_indicators.weighted_close_fxn()
-    data["weighted_close"] = weighted_close
-    data["vwap"] = my_indicators.return_vwap()
-    data["SMA1"] = my_indicators.sma(period=12)
-    data["SMA2"] = my_indicators.sma(period=24)
+    dataset["weighted_close"] = weighted_close
+    dataset["vwap"] = my_indicators.return_vwap()
+    dataset["SMA1"] = my_indicators.sma(period=12)
+    dataset["SMA2"] = my_indicators.sma(period=24)
     upperband, middleband, lowerband = my_indicators.bbands(typ="weighted_close")
-    data["BBupperband"] = upperband
-    data["BBlowerband"] = lowerband
-    data["BBmiddleband"] = middleband
-    data["EMASpan1"] = my_indicators.ema(period=12)
-    data["EMASpan2"] = my_indicators.ema(period=24)
-    data["psar"] = my_indicators.psar()
+    dataset["BBupperband"] = upperband
+    dataset["BBlowerband"] = lowerband
+    dataset["BBmiddleband"] = middleband
+    dataset["EMASpan1"] = my_indicators.ema(period=12)
+    dataset["EMASpan2"] = my_indicators.ema(period=24)
+    dataset["psar"] = my_indicators.psar()
     (
-        data["macd"],
-        data["macdsignal"],
-        data["macdhist"],
+        dataset["macd"],
+        dataset["macdsignal"],
+        dataset["macdhist"],
     ) = my_indicators.macd()
-    data["rsi"] = my_indicators.rsi(window_length=24)
-    data["atr"] = my_indicators.atr(n=7)
-    data["mom"] = my_indicators.mom(period=24)
+    dataset["rsi"] = my_indicators.rsi(window_length=24)
+    dataset["atr"] = my_indicators.atr(n=7)
+    dataset["mom"] = my_indicators.mom(period=24)
     (
-        data["stochf_fastk"],
-        data["stochf_fastd"],
-        data["stoch_slowk"],
-        data["stoch_slowd"],
+        dataset["stochf_fastk"],
+        dataset["stochf_fastd"],
+        dataset["stoch_slowk"],
+        dataset["stoch_slowd"],
     ) = my_indicators.stochastics()
-    return data
+    return dataset
+
+
+# Strategy building functions
+# To Explain what the codes do or ensure they are self explanatory: future work
+
+
+def return_best_rsi(symbol):
+    """Returns the best rsi values for a symbol"""
+    dataset = set_up_data(symbol)
+    my_indicators = Fin_Indicator(dataset)
+    data = dataset.copy()
+    sma1 = range(25, 46, 5)
+    sma2 = range(55, 86, 5)
+    results_list = []
+    v = pd.DataFrame()
+    for SMA1, SMA2 in product(sma1, sma2):
+        #         data = dataset.copy()
+        data = (pd.DataFrame(data["close"])).dropna()
+        data.dropna(inplace=True)
+        data["Returns"] = np.log(data["close"] / data["close"].shift(1))
+        #         v["Returns"] = data["Returns"]
+        weighted_close = my_indicators.weighted_close_fxn()
+        data["rsi"] = my_indicators.rsi(window_length=24)
+        data["Position"] = np.where((data["rsi"] < SMA1), 1, np.nan)
+        data["Position"] = np.where((data["rsi"] > SMA2), -1, data["Position"])
+        data["Position"].ffill(inplace=True)
+        data["Strategy"] = data["Position"].shift(1) * data["Returns"]
+        perf = np.exp(data[["Returns", "Strategy"]].sum())
+        results_list.append(
+            {
+                "SMA1": SMA1,
+                "SMA2": SMA2,
+                "Market": perf["Returns"],
+                "Strategy": perf["Strategy"],
+                "OUT": perf["Strategy"] - perf["Returns"],
+            }
+        )
+    results = pd.DataFrame.from_records(results_list)
+    return results.sort_values("OUT", ascending=False).iloc[0]
+
+
+def trail_stop(symbol, multiplier, vwap=None, win=14):
+    """Returns trailing stop values with position prediction"""
+    # To write explanations for what this function does in detail: future work
+    dataset = set_up_full_data(symbol, vwap=vwap, win=win)
+    my_indicators = Fin_Indicator(dataset)
+    vc = pd.DataFrame()
+    vc["atr"] = dataset["atr"]
+    vc["close"] = dataset["close"]
+    ac = []
+    vc.dropna(inplace=True)
+    vc["rsi"] = my_indicators.rsi(window_length=24)
+    smas = return_best_rsi(symbol)
+    SMA1 = int(smas["SMA1"])
+    SMA2 = int(smas["SMA2"])
+    vc["close"] = np.where(
+        vc["rsi"] > SMA2, vc["close"] + (vc["close"] * 0.0098), vc["close"]
+    )
+    vc["close"] = np.where(
+        vc["rsi"] < SMA1, vc["close"] - (vc["close"] * 0.0098), vc["close"]
+    )
+    ac.append(vc["close"][0] - (vc["atr"][0] * multiplier))
+    for index, rows in vc.iterrows():
+        if ac[-1] < rows["close"]:
+            patr = rows["close"] - (rows["atr"] * multiplier)
+            if patr > ac[-1]:
+                ac.append(patr)
+            else:
+                ac.append(ac[-1])
+        else:
+            patr = rows["close"] + (rows["atr"] * 3.1)
+            if patr < ac[-1]:
+                ac.append(patr)
+            else:
+                ac.append(ac[-1])
+    del ac[0]
+    kd = pd.Series(ac, index=vc.index)
+    trail_stop_df = pd.DataFrame()
+    trail_stop_df["close"] = vc["close"]
+    trail_stop_df["atr2"] = kd
+    trail_stop_df["exit_signal"] = trail_stop_df["close"] < trail_stop_df["atr2"]
+    trail_stop_df["Position"] = np.where(trail_stop_df["exit_signal"], -1, np.nan)
+    return trail_stop_df["Position"], trail_stop_df["atr2"]
+
 
 
