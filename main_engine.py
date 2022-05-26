@@ -398,13 +398,11 @@ def set_up_data(symbol, vwap=1, win=24):
     # dataset = all_data[symbol].copy()
 
     # comment later
-    print(symbol, "set up data")
     path = "/home/ihechi/Documents/Datasheets_and_Datasets/crypto/Bot/"
     pkl_file = open(path + symbol + ".pkl", "rb")
     dataset = pickle.load(pkl_file)
     pkl_file.close()
 
-    print("setting up", symbol)
     dataset["openTime"] = pd.to_datetime(dataset["openTime"])
     dataset["closeTime"] = pd.to_datetime(dataset["closeTime"])
     dataset["closecheck"] = pd.to_numeric(dataset["close"], errors="coerce")
@@ -455,12 +453,15 @@ def set_up_data(symbol, vwap=1, win=24):
 
 
 def set_up_full_data(
-    symbol, fai=0.0011, afmax=0.2, vwap=None, win=14, typ="weighted_close"
+    symbol, fai=0.0011, afmax=0.2, vwap=None, win=14, typ="weighted_close", new=0
 ):
     """Sets up data table to be used with both default values and some values from indicators"""
+    global all_set_up_data
     # To replace hard coded values with values from optional arguments: future work
-    print(symbol, "set up full")
-    dataset = set_up_data(symbol, vwap=vwap, win=win)
+    if new:
+        dataset = set_up_data(symbol, vwap=vwap, win=win)
+    else:
+        dataset = all_set_up_data[symbol].copy()
     my_indicators = Fin_Indicator(dataset)
     weighted_close = my_indicators.weighted_close_fxn()
     dataset["weighted_close"] = weighted_close
@@ -495,10 +496,13 @@ def set_up_full_data(
 # To Explain what the codes do or ensure they are self explanatory: future work
 
 
-def return_best_rsi(symbol):
+def return_best_rsi(symbol, new=0):
     """Returns the best rsi values for a symbol"""
-    print(symbol, "return best rsi")
-    dataset = set_up_data(symbol)
+    global all_set_up_data
+    if new:
+        dataset = set_up_data(symbol)
+    else:
+        dataset = all_set_up_data[symbol].copy()
     my_indicators = Fin_Indicator(dataset)
     data = dataset.copy()
     sma1 = range(25, 46, 5)
@@ -531,11 +535,14 @@ def return_best_rsi(symbol):
     return results.sort_values("OUT", ascending=False).iloc[0]
 
 
-def trail_stop(symbol, multiplier, vwap=None, win=14):
+def trail_stop(symbol, multiplier, vwap=None, win=14, new=0):
     """Returns trailing stop values with position prediction"""
     # To write explanations for what this function does in detail: future work
-    print(symbol, "trail stop")
-    dataset = set_up_full_data(symbol, vwap=vwap, win=win)
+    global all_fully_set_up_data
+    if new:
+        dataset = set_up_full_data(symbol, vwap=vwap, win=win)
+    else:
+        dataset = all_fully_set_up_data[symbol].copy()
     my_indicators = Fin_Indicator(dataset)
     vc = pd.DataFrame()
     vc["atr"] = dataset["atr"]
@@ -577,16 +584,19 @@ def trail_stop(symbol, multiplier, vwap=None, win=14):
 # Main Predictor
 
 
-def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14):
+def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14, new=0):
     """Returns a dataset computed with predicted positions and the name of the best strategy column
 
     stop: trail stop multiplier value
     win: window period for most indicators calculation
     fai: is iaf - increment acceleration factor
     """
-    print(symbol, "calc all")
+    global all_fully_set_up_data
     # set up dataset
-    dataset = set_up_full_data(symbol, fai=fai, vwap=vwap, win=win)
+    if new:
+        dataset = set_up_full_data(symbol, fai=fai, vwap=vwap, win=win)
+    else:
+        dataset = all_fully_set_up_data[symbol].copy()
 
     # initialize the Fin_Indicator class
     my_indicators = Fin_Indicator(dataset)
@@ -662,7 +672,7 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14):
     clean_data["PositionEMA"] = dataset_copy["Position"]
 
     # trail_stop Strategy and atr value
-    clean_data["atr2"] = trail_stop(symbol, stop)
+    clean_data["atr2"] = trail_stop(symbol, stop, new=1)
     clean_data["trail_stop"] = np.where(clean_data["close"] > clean_data["atr2"], 1, -1)
 
     # Strategy2 Strategy
@@ -674,7 +684,8 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14):
     )
 
     # PostionPR Strategy
-    dataset_pr = set_up_full_data(symbol, fai=fai, vwap=0, win=win)
+    print("dataset pr")
+    dataset_pr = set_up_full_data(symbol, fai=fai, vwap=0, win=win, new=1)
     # set up a separate dataset for PositionPr strategy.
     clean_data["PositionPR"] = np.where(dataset_pr["psar"] > dataset_pr["close"], -1, 1)
     clean_data["psar"] = dataset_pr["psar"].copy()
@@ -737,7 +748,7 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14):
     return clean_data
 
 
-# Backtesting Functions
+# Backtesting
 def calc_alls(symbols):
     for symbol in symbols:
         clean_data = calc_all(symbol, 2.5, 48, vwap=1, win=24)
@@ -767,7 +778,7 @@ def get_my_positions(symbol):
     global calculated_data
 
     clean_data = calculated_data[symbol]
-    print("Using Strategy: ", strategy)
+    lis.append(symbol)
     predictions = pd.DataFrame(clean_data[strategy])
     predictions["positions"] = predictions[strategy]
     return pd.Series(predictions["positions"])
@@ -788,8 +799,14 @@ class makeStrategy(Strategy):
             self.position.close()
 
 
-def backtest(symbol):
-    dataset = set_up_data(symbol)
+def backtest(symbol_strategy, new=0):
+    global all_set_up_data
+    global strategy
+    symbol, strategy = get_strategy(symbol_strategy)
+    if new:
+        dataset = set_up_data(symbol)
+    else:
+        dataset = all_set_up_data[symbol].copy()
 
     bt = Backtest(
         dataset, makeStrategy, cash=1000000, commission=0.004, exclusive_orders=True
@@ -799,6 +816,7 @@ def backtest(symbol):
     return {
         "start_date": output["Start"],
         "end_date": output["End"],
+        "percentage_exposure_time": output["Exposure Time [%]"],
         "percentage_returns": output["Return [%]"],
         "percentage_buy_&_hold_return": output["Buy & Hold Return [%]"],
         "maximum_drawdown": output["Max. Drawdown [%]"],
@@ -812,11 +830,11 @@ def backtest(symbol):
 
 def backtests(symbols):
     for symbol_strategy in symbols:
-        symbol, strategy = get_strategy(symbol_strategy)
-        output_values = backtest(symbol)
+        output_values = backtest(symbol_strategy)
         backtest_results[symbol_strategy] = output_values
 
 
+# Study the backtesting library then multi_thread backtests.
 def multi_thread_backtests(my_symbols):
     """Multi threads the backtests of multiple symbols"""
     backtestThreads = []
@@ -833,3 +851,17 @@ def multi_thread_backtests(my_symbols):
     for backtestThread in backtestThreads:
         backtestThread.join()
     print("Done.")
+
+
+def set_up_all_data(symbols):
+    global all_set_up_data
+    for symbol in symbols:
+        clean_data = set_up_data(symbol)
+        all_set_up_data[symbol] = clean_data
+
+
+def set_up_all_data_fully(symbols, new=0):
+    global all_fully_set_up_data
+    for symbol in symbols:
+        clean_data = set_up_full_data(symbol, 2.5, 48, vwap=1, win=24, new=new)
+        all_fully_set_up_data[symbol] = clean_data
