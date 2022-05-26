@@ -44,7 +44,7 @@ def get_symbol_interval(symbol):
         return symbol.replace("4h", ""), "4h"
     elif "6h" in symbol:
         return symbol.replace("6h", ""), "6h"
-    elif "1D" in symbol:
+    elif "1d" in symbol:
         return symbol.replace("1d", ""), "1d"
     else:
         return symbol, "1h"
@@ -291,8 +291,6 @@ class Fin_Indicator:
 
 
 # Data Download and Setup
-
-
 def request_download(url, headers=None):
     """Request to get the url passed and returns the response."""
     active = True
@@ -362,7 +360,7 @@ def get_klines(symbol, interval, limit=1000):
     return dataset
 
 
-def download_symbols(symbols, interval="1h"):
+def download_symbols(symbols):
     """Fetches and saves kline data gotten for symbols passed"""
     for symbol in symbols:
         symbol, interval = get_symbol_interval(symbol)
@@ -391,17 +389,9 @@ def multi_thread_download(my_symbols):
 
 
 def set_up_data(symbol, vwap=1, win=24):
-    # Explain or simplify code later: future work
     """Sets up data table to be used for predictions with default values"""
-    # uncomment later
-    # global all_data
-    # dataset = all_data[symbol].copy()
-
-    # comment later
-    path = "/home/ihechi/Documents/Datasheets_and_Datasets/crypto/Bot/"
-    pkl_file = open(path + symbol + ".pkl", "rb")
-    dataset = pickle.load(pkl_file)
-    pkl_file.close()
+    global all_data
+    dataset = all_data[symbol].copy()
 
     dataset["openTime"] = pd.to_datetime(dataset["openTime"])
     dataset["closeTime"] = pd.to_datetime(dataset["closeTime"])
@@ -412,10 +402,10 @@ def set_up_data(symbol, vwap=1, win=24):
     dataset["open"] = pd.to_numeric(dataset["close"], errors="coerce")
     dataset["opencheck"] = pd.to_numeric(dataset["open"], errors="coerce")
     # Close, High, Low, Open, symbol -> for backtests
-    dataset["Close"] = pd.to_numeric(dataset["open"], errors="coerce")
+    dataset["Close"] = pd.to_numeric(dataset["opencheck"], errors="coerce")
     dataset["High"] = pd.to_numeric(dataset["high"], errors="coerce")
     dataset["Low"] = pd.to_numeric(dataset["low"], errors="coerce")
-    dataset["Open"] = pd.to_numeric(dataset["close"], errors="coerce")
+    dataset["Open"] = pd.to_numeric(dataset["closecheck"], errors="coerce")
     dataset["Volume"] = pd.to_numeric(dataset["volume"], errors="coerce")
     dataset["symbol"] = symbol
     dataset["volume"] = pd.to_numeric(dataset["volume"], errors="coerce")
@@ -684,7 +674,6 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14, new=0):
     )
 
     # PostionPR Strategy
-    print("dataset pr")
     dataset_pr = set_up_full_data(symbol, fai=fai, vwap=0, win=win, new=1)
     # set up a separate dataset for PositionPr strategy.
     clean_data["PositionPR"] = np.where(dataset_pr["psar"] > dataset_pr["close"], -1, 1)
@@ -776,9 +765,8 @@ def multi_thread_calculations(my_symbols):
 
 def get_my_positions(symbol):
     global calculated_data
-
+    # strategy is set by backtest function. to set it here instead: future work
     clean_data = calculated_data[symbol]
-    lis.append(symbol)
     predictions = pd.DataFrame(clean_data[strategy])
     predictions["positions"] = predictions[strategy]
     return pd.Series(predictions["positions"])
@@ -865,3 +853,36 @@ def set_up_all_data_fully(symbols, new=0):
     for symbol in symbols:
         clean_data = set_up_full_data(symbol, 2.5, 48, vwap=1, win=24, new=new)
         all_fully_set_up_data[symbol] = clean_data
+
+
+def get_results(symbols_list, intervals, strategies):
+    print("Started")
+    for symbol, interval, strategy in product(symbols_list, intervals, strategies):
+        if symbol + interval not in symbols_intervals:
+            symbols_intervals.append(symbol + interval)
+        symbols_strategies.append(symbol + interval + "_" + strategy)
+
+    # download_symbols(symbols_intervals)
+    multi_thread_download(symbols_intervals)
+
+    set_up_all_data(symbols_intervals)
+    set_up_all_data_fully(symbols_intervals)
+
+    calc_alls(
+        symbols_intervals
+    )  # improve multithreading and use multi_thread_calculations instead
+    # Same with multi_thread_backtests. at present, single threaded executions
+    # execute faster than the multi threaded counterparts I've made.
+    # multi_thread_calculations(symbols_intervals)
+
+    backtests(symbols_strategies)
+    # multi_thread_backtests(symbols_strategies)
+    return backtest_results, calculated_data
+
+
+all_fully_set_up_data = {}
+all_set_up_data = {}
+backtest_results = {}
+calculated_data = {}
+symbols_strategies = []
+symbols_intervals = []
