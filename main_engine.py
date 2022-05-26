@@ -45,9 +45,35 @@ def get_symbol_interval(symbol):
     elif "6h" in symbol:
         return symbol.replace("6h", ""), "6h"
     elif "1D" in symbol:
-        return symbol.replace("1D", ""), "1D"
+        return symbol.replace("1d", ""), "1d"
     else:
         return symbol, "1h"
+
+
+def get_strategy(symbol):
+    """Given a 'symbol' eg -> 'BTCUSDT1h_prXX'
+    it returns -> 'BTCUSDT1h', 'prXX'
+    """
+    if "_prXXcmf" in symbol:
+        return symbol.replace("_prXXcmf", ""), "prXX"
+    elif "_trail_stop" in symbol:
+        return symbol.replace("_trail_stop", ""), "trail_stop"
+    elif "_prXX" in symbol:
+        return symbol.replace("_prXX", ""), "prXX"
+    elif "_prX" in symbol:
+        return symbol.replace("_prX", ""), "prX"
+    elif "_cmf" in symbol:
+        return symbol.replace("_cmf", ""), "cmf"
+    elif "_PositionPR" in symbol:
+        return symbol.replace("_PositionPR", ""), "PositionPR"
+    elif "_Strategy2" in symbol:
+        return symbol.replace("_Strategy2", ""), "Strategy2"
+    elif "_PositionEMA" in symbol:
+        return symbol.replace("_PositionEMA", ""), "PositionEMA"
+    elif "_PositionMACD" in symbol:
+        return symbol.replace("_PositionMACD", ""), "PositionMACD"
+    else:
+        return symbol
 
 
 # Main Engine for Indicators used. To be replaced with ta library: future work
@@ -368,10 +394,11 @@ def set_up_data(symbol, vwap=1, win=24):
     # Explain or simplify code later: future work
     """Sets up data table to be used for predictions with default values"""
     # uncomment later
-    global all_data
-    dataset = all_data[symbol].copy()
+    # global all_data
+    # dataset = all_data[symbol].copy()
 
     # comment later
+    print(symbol, "set up data")
     path = "/home/ihechi/Documents/Datasheets_and_Datasets/crypto/Bot/"
     pkl_file = open(path + symbol + ".pkl", "rb")
     dataset = pickle.load(pkl_file)
@@ -386,11 +413,13 @@ def set_up_data(symbol, vwap=1, win=24):
     dataset["low"] = pd.to_numeric(dataset["low"], errors="coerce")
     dataset["open"] = pd.to_numeric(dataset["close"], errors="coerce")
     dataset["opencheck"] = pd.to_numeric(dataset["open"], errors="coerce")
+    # Close, High, Low, Open, symbol -> for backtests
     dataset["Close"] = pd.to_numeric(dataset["open"], errors="coerce")
     dataset["High"] = pd.to_numeric(dataset["high"], errors="coerce")
     dataset["Low"] = pd.to_numeric(dataset["low"], errors="coerce")
     dataset["Open"] = pd.to_numeric(dataset["close"], errors="coerce")
     dataset["Volume"] = pd.to_numeric(dataset["volume"], errors="coerce")
+    dataset["symbol"] = symbol
     dataset["volume"] = pd.to_numeric(dataset["volume"], errors="coerce")
     if vwap:
         dataset["close"] = ta.volume.volume_weighted_average_price(
@@ -430,6 +459,7 @@ def set_up_full_data(
 ):
     """Sets up data table to be used with both default values and some values from indicators"""
     # To replace hard coded values with values from optional arguments: future work
+    print(symbol, "set up full")
     dataset = set_up_data(symbol, vwap=vwap, win=win)
     my_indicators = Fin_Indicator(dataset)
     weighted_close = my_indicators.weighted_close_fxn()
@@ -467,6 +497,7 @@ def set_up_full_data(
 
 def return_best_rsi(symbol):
     """Returns the best rsi values for a symbol"""
+    print(symbol, "return best rsi")
     dataset = set_up_data(symbol)
     my_indicators = Fin_Indicator(dataset)
     data = dataset.copy()
@@ -503,6 +534,7 @@ def return_best_rsi(symbol):
 def trail_stop(symbol, multiplier, vwap=None, win=14):
     """Returns trailing stop values with position prediction"""
     # To write explanations for what this function does in detail: future work
+    print(symbol, "trail stop")
     dataset = set_up_full_data(symbol, vwap=vwap, win=win)
     my_indicators = Fin_Indicator(dataset)
     vc = pd.DataFrame()
@@ -539,9 +571,7 @@ def trail_stop(symbol, multiplier, vwap=None, win=14):
     trail_stop_df = pd.DataFrame()
     trail_stop_df["close"] = vc["close"]
     trail_stop_df["atr2"] = kd
-    trail_stop_df["exit_signal"] = trail_stop_df["close"] < trail_stop_df["atr2"]
-    trail_stop_df["Position"] = np.where(trail_stop_df["exit_signal"], -1, np.nan)
-    return trail_stop_df["Position"], trail_stop_df["atr2"]
+    return trail_stop_df["atr2"]
 
 
 # Main Predictor
@@ -554,6 +584,7 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14):
     win: window period for most indicators calculation
     fai: is iaf - increment acceleration factor
     """
+    print(symbol, "calc all")
     # set up dataset
     dataset = set_up_full_data(symbol, fai=fai, vwap=vwap, win=win)
 
@@ -631,7 +662,8 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14):
     clean_data["PositionEMA"] = dataset_copy["Position"]
 
     # trail_stop Strategy and atr value
-    clean_data["trail_stop"], clean_data["atr2"] = trail_stop(symbol, stop)
+    clean_data["atr2"] = trail_stop(symbol, stop)
+    clean_data["trail_stop"] = np.where(clean_data["close"] > clean_data["atr2"], 1, -1)
 
     # Strategy2 Strategy
     clean_data["Strategy2"] = np.where((clean_data["PositionEMA"] == 1), 1, np.nan)
@@ -670,7 +702,7 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14):
         clean_data["prXX"],
     )
 
-    # cmf_ii Strategy
+    # cmf Strategy
     clean_data["trend_aroon_up"] = ta.trend.aroon_up(
         close=clean_data["closecheck"], window=12
     )
@@ -678,37 +710,126 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14):
         close=clean_data["closecheck"], window=12
     )
 
-    clean_data["cmf_ii"] = np.where(
+    clean_data["cmf"] = np.where(
         (clean_data["trend_aroon_up"] > clean_data["trend_aroon_down"])
         & (clean_data["trend_aroon_up"] > 95),
         1,
         np.nan,
     )
-    clean_data["cmf_ii"] = np.where(
+    clean_data["cmf"] = np.where(
         (clean_data["trend_aroon_up"] < clean_data["trend_aroon_down"])
         & (clean_data["trend_aroon_down"] > 95),
         -1,
-        clean_data["cmf_ii"],
+        clean_data["cmf"],
     )
 
-    clean_data["cmf_ii"].ffill(inplace=True)
+    clean_data["cmf"].ffill(inplace=True)
 
+    # prXXcmf Strategy
     clean_data["prXXcmf"] = np.where(
-        (clean_data["prXX"] == 1) & (clean_data["cmf_ii"] == 1), 1, -1
+        (clean_data["prXX"] == 1) & (clean_data["cmf"] == 1), 1, -1
     )
 
     # forward and backward fills nan values
     clean_data.ffill(inplace=True)
     clean_data.bfill(inplace=True)
 
-    best = "prXX"  # column name for best strategy at the moment.
-
-    return clean_data, best
+    return clean_data
 
 
 # Backtesting Functions
+def calc_alls(symbols):
+    for symbol in symbols:
+        clean_data = calc_all(symbol, 2.5, 48, vwap=1, win=24)
+        calculated_data[symbol] = clean_data
+        print(symbol, " Updated")
+
+
+def multi_thread_calculations(my_symbols):
+    """Multi threads the backtests of multiple symbols"""
+    call_allThreads = []
+    adder = int(len(my_symbols) / 6)
+    v = 0
+    for i in range(0, len(my_symbols), adder):
+        symbols_list_truncated = my_symbols[v : i + adder]
+        call_allThread = threading.Thread(
+            target=calc_alls, args=([symbols_list_truncated])
+        )
+        call_allThreads.append(call_allThread)
+        call_allThread.start()
+        v += adder
+    for call_allThread in call_allThreads:
+        call_allThread.join()
+    print("Done.")
+
+
 def get_my_positions(symbol):
-    clean_data, best = calc_all(symbol, 2.5, 48, fai=0.0011, vwap=0, win=14)
-    predictions = pd.DataFrame(clean_data[best])
-    predictions["positions"] = predictions[best]
+    global calculated_data
+
+    clean_data = calculated_data[symbol]
+    print("Using Strategy: ", strategy)
+    predictions = pd.DataFrame(clean_data[strategy])
+    predictions["positions"] = predictions[strategy]
     return pd.Series(predictions["positions"])
+
+
+class makeStrategy(Strategy):
+    def init(self):
+        self.symbol = self.data.symbol[0]  # figure a better
+        # way to pass the symbol attribute to get_my_positions
+        # for backtests
+        self.change = self.I(get_my_positions, self.symbol)
+
+    def next(self):
+        if crossover(self.change, 0):
+            self.position.close()
+            self.buy()
+        elif crossover(0, self.change):
+            self.position.close()
+
+
+def backtest(symbol):
+    dataset = set_up_data(symbol)
+
+    bt = Backtest(
+        dataset, makeStrategy, cash=1000000, commission=0.004, exclusive_orders=True
+    )
+
+    output = bt.run()
+    return {
+        "start_date": output["Start"],
+        "end_date": output["End"],
+        "percentage_returns": output["Return [%]"],
+        "percentage_buy_&_hold_return": output["Buy & Hold Return [%]"],
+        "maximum_drawdown": output["Max. Drawdown [%]"],
+        "maximum_drawdown_duration": output["Max. Drawdown Duration"],
+        "num_trades": output["# Trades"],
+        "win_rate": output["Win Rate [%]"],
+        "trade_percentage_expectancy": output["Expectancy [%]"],
+        "profit_factor": output["Profit Factor"],
+    }
+
+
+def backtests(symbols):
+    for symbol_strategy in symbols:
+        symbol, strategy = get_strategy(symbol_strategy)
+        output_values = backtest(symbol)
+        backtest_results[symbol_strategy] = output_values
+
+
+def multi_thread_backtests(my_symbols):
+    """Multi threads the backtests of multiple symbols"""
+    backtestThreads = []
+    adder = int(len(my_symbols) / 6)
+    v = 0
+    for i in range(0, len(my_symbols), adder):
+        symbols_list_truncated = my_symbols[v : i + adder]
+        backtestThread = threading.Thread(
+            target=backtests, args=([symbols_list_truncated])
+        )
+        backtestThreads.append(backtestThread)
+        backtestThread.start()
+        v += adder
+    for backtestThread in backtestThreads:
+        backtestThread.join()
+    print("Done.")
