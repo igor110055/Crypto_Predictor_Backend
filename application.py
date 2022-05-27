@@ -35,9 +35,22 @@ class Prediction(db.Model):
 class Backtest(db.Model):
   __tablename__ = "Backtest"
   id = db.Column(db.Integer, primary_key=True)
+  symbol = db.Column(db.String(50))
   symbol_strategy = db.Column(db.String(50))
   created_at = db.Column(db.Date())
-  data = db.Column(db.String(200))
+  start_date = db.Column(db.Date)
+  end_date = db.Column(db.Date)
+  percentage_exposure_time = db.Column(db.Float)
+  percentage_returns = db.Column(db.Float)
+  percentage_buy_and_hold_return = db.Column(db.Float)
+  maximum_drawdown = db.Column(db.Float)
+  maximum_drawdown_duration =  db.Column(db.String(50))
+  num_trades =  db.Column(db.Integer)
+  win_rate =  db.Column(db.Float)
+  trade_percentage_expectancy =  db.Column(db.Float)
+  profit_factor =  db.Column(db.Float)
+
+  
 
 
 # Create the table
@@ -58,6 +71,7 @@ db.create_all()
 def get_predictions():
   predictions = Prediction.query.all()
   return_list = []
+  print(predictions)
   for prediction in predictions: 
     return_list.append(
       {
@@ -77,7 +91,18 @@ def get_backtests():
       {
         "id": backtest.id,
         "symbol": backtest.symbol,
-        "data": backtest.data
+        "symbol_strategy": backtest.symbol_strategy,
+        "start_date": backtest.start_date,
+        "end_date": backtest.end_date,
+        "percentage_returns": backtest.percentage_returns,
+        "percentage_buy_and_hold_return": backtest.percentage_buy_and_hold_return,
+        "maximum_drawdown": backtest.maximum_drawdown,
+        "maximum_drawdown_duration": backtest.maximum_drawdown_duration,
+        "num_trades": backtest.num_trades,
+        "win_rate": backtest.win_rate,
+        "trade_percentage_expectancy": backtest.trade_percentage_expectancy,
+        "profit_factor": backtest.profit_factor,
+        "percentage_exposure_time": backtest.percentage_exposure_time
       }
     )
   return jsonify(return_list), 200
@@ -100,6 +125,35 @@ def get_prediction(symbol):
   prediction = return_list[0] if len(return_list) else None
   print(prediction)
   return jsonify(prediction), 200
+
+@app.route('/backtests/<symbol_strategy>', methods=["GET"])
+def get_backtest(symbol_strategy):
+  backtests = Backtest.query.all()
+  return_list = []
+  for backtest in backtests: 
+    if backtest.symbol_strategy == symbol_strategy:
+      return_list.append(
+        {
+        "id": backtest.id,
+        "symbol": backtest.symbol,
+        "symbol_strategy": backtest.symbol_strategy,
+        "start_date": backtest.start_date,
+        "end_date": backtest.end_date,
+        "percentage_returns": backtest.percentage_returns,
+        "percentage_buy_and_hold_return": backtest.percentage_buy_and_hold_return,
+        "maximum_drawdown": backtest.maximum_drawdown,
+        "maximum_drawdown_duration": backtest.maximum_drawdown_duration,
+        "num_trades": backtest.num_trades,
+        "win_rate": backtest.win_rate,
+        "trade_percentage_expectancy": backtest.trade_percentage_expectancy,
+        "profit_factor": backtest.profit_factor,
+        "percentage_exposure_time": backtest.percentage_exposure_time
+      }
+    )
+  
+  
+  backtest = return_list[0] if len(return_list) else None
+  return jsonify(backtest), 200
 
 if __name__ == "__main__":
   app.run(debug=True)

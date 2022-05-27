@@ -29,23 +29,36 @@ now = datetime.now()
 
 # faker = Faker()
 
-
+import pandas as pd
 symbols_list = ["ENJUSDT", "BTCUSDT", "EOSUSDT", "ONTUSDT", "XRPUSDT", "AXSUSDT", "CHZUSDT","ETHUSDT","BNBUSDT", "MATICUSDT"]
 # intervals = ["1h", "15m", "30m", "1h", "1d", "5m", "4h"]
 intervals = ["1h", "30m", "2h", "4h", "1d", "12h"]
 strategies = ["PositionMACD", "PositionEMA", "trail_stop", "Strategy2", "PositionPR", "prX", "prXX", "cmf", "prXXcmf"]
 
-start = datetime.now()
 results, calculated_data = get_results(symbols_list[:2], intervals[:1], strategies[:1])
-print(results)
-print(type(results))
-for symbol, dataset in results.items():
+
+for symbol_strategy, dataset in results.items():
   now = datetime.now()
-  print(symbol, ": Working on!")
-  new_prediction = application.Prediction(
-    symbol=symbol, created_at=now #dataset.astype(str)[:150] # .to_dict('dict')
+  new_backtest = application.Backtest(
+    symbol_strategy=symbol_strategy, 
+    symbol=symbol_strategy.split("_")[0], 
+    created_at=now,
+    start_date = dataset['start_date'],
+    end_date = dataset['end_date'],
+    percentage_exposure_time = dataset["percentage_exposure_time"],
+
+    percentage_returns = dataset['percentage_returns'],
+    percentage_buy_and_hold_return = dataset['percentage_buy_&_hold_return'],
+
+    maximum_drawdown = dataset['maximum_drawdown'],
+    maximum_drawdown_duration = str(dataset['maximum_drawdown_duration']),
+    num_trades = dataset['num_trades'],
+    win_rate = dataset['win_rate'],
+    trade_percentage_expectancy = dataset['trade_percentage_expectancy'],
+    profit_factor = dataset['profit_factor'],
+    #dataset.astype(str)[:150] # .to_dict('dict')
   )
-  db.session.add(new_prediction)
+  db.session.add(new_backtest)
   db.session.commit()
 
 print("Done!")
