@@ -390,8 +390,15 @@ def multi_thread_download(my_symbols):
 
 def set_up_data(symbol, vwap=1, win=24):
     """Sets up data table to be used for predictions with default values"""
-    global all_data
-    dataset = all_data[symbol].copy()
+    # global all_data
+    # dataset = all_data[symbol].copy()
+
+    # comment later
+    print(symbol, "set up data")
+    path = "/home/ihechi/Documents/Datasheets_and_Datasets/crypto/Bot/"
+    pkl_file = open(path + symbol + ".pkl", "rb")
+    dataset = pickle.load(pkl_file)
+    pkl_file.close()
 
     dataset["openTime"] = pd.to_datetime(dataset["openTime"])
     dataset["closeTime"] = pd.to_datetime(dataset["closeTime"])
@@ -863,7 +870,7 @@ def get_results(symbols_list, intervals, strategies):
         symbols_strategies.append(symbol + interval + "_" + strategy)
 
     # download_symbols(symbols_intervals)
-    multi_thread_download(symbols_intervals)
+    # multi_thread_download(symbols_intervals) # uncomment later
 
     set_up_all_data(symbols_intervals)
     set_up_all_data_fully(symbols_intervals)
@@ -879,7 +886,7 @@ def get_results(symbols_list, intervals, strategies):
     # multi_thread_backtests(symbols_strategies)
     return backtest_results, calculated_data
 
-
+print("Started")
 all_fully_set_up_data = {}
 all_set_up_data = {}
 backtest_results = {}
