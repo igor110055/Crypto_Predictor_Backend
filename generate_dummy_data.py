@@ -2,12 +2,13 @@ from random import randrange
 from sqlite3 import Connection as SQLite3Connection
 from datetime import datetime
 from main_engine import get_results
-from sqlalchemy import event
+from sqlalchemy import event, create_engine
 from sqlalchemy.engine import Engine
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 import application
 import pandas as pd
+
 
 # app
 app = Flask(__name__)
@@ -25,7 +26,6 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
 
 
 db = SQLAlchemy(app)
-# faker = Faker()
 
 symbols_list = [
     "ENJUSDT",
@@ -53,7 +53,20 @@ strategies = [
     "prXXcmf",
 ]
 
-results, calculated_data = get_results(symbols_list[:], intervals[:], strategies[:])
+results, calculated_data = get_results(symbols_list[:2], intervals[:2], strategies[:2])
+
+
+for symbol, dataset in calculated_data.items():
+  now = datetime.now()
+  print(now)
+  new_prediction = application.Prediction(
+    date_created=now,
+    symbol = symbol,
+    data = dataset.to_dict("list")
+  )
+  db.session.add(new_prediction)
+  db.session.commit()
+
 
 for symbol_strategy, dataset in results.items():
     now = datetime.now()
@@ -72,8 +85,7 @@ for symbol_strategy, dataset in results.items():
         num_trades=dataset["num_trades"],
         win_rate=dataset["win_rate"],
         trade_percentage_expectancy=dataset["trade_percentage_expectancy"],
-        profit_factor=dataset["profit_factor"],
-        # dataset.astype(str)[:150] # .to_dict('dict')
+        profit_factor=dataset["profit_factor"]
     )
     db.session.add(new_backtest)
     db.session.commit()

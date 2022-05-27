@@ -622,6 +622,8 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14, new=0):
             ]
         ].copy()
     )
+    clean_data["closeTime"] = clean_data["closeTime"].dt.strftime('%Y-%m-%d %H:%M:%S') # to enable json serialization for sql parsing. 
+    # if required to be pure timestamp, revisit: future work
     (
         clean_data["kijun_sen"],
         clean_data["tenkan_sen"],

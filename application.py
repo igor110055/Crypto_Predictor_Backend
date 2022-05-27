@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from sqlite3 import Connection as SQLite3Connection
 from datetime import datetime
-from sqlalchemy import event
+from sqlalchemy import event, JSON, ARRAY
 from sqlalchemy.engine import Engine
 from flask_sqlalchemy import SQLAlchemy
 import time
@@ -31,8 +31,7 @@ class Prediction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     symbol = db.Column(db.String(50))
     date_created = db.Column(db.Date)
-    data = db.Column(db.String(200))
-
+    data = db.Column(JSON)
 
 class Backtest(db.Model):
     __tablename__ = "Backtest"
@@ -55,19 +54,8 @@ class Backtest(db.Model):
 
 
 # Create the table
-# db.drop_all()
+db.drop_all()
 db.create_all()
-
-# models
-# class Backtest(db.Model):
-#   __tablename__ = "Backtest"
-#   id = db.Column(db.Integer, primary_key=True)
-#   name = db.Column(db.String(50))
-#   email = db.Column(db.String(50))
-#   address = db.Column(db.String(200))
-#   phone = db.Column(db.String(50))
-#   posts = db.relationship("BlogPost", cascade=("all, delete"))
-
 
 @app.route("/predictions", methods=["GET"])
 def get_predictions():
@@ -76,10 +64,13 @@ def get_predictions():
     print(predictions)
     for prediction in predictions:
         return_list.append(
-            {"id": prediction.id, "symbol": prediction.symbol, "data": prediction.data}
+            {"id": prediction.id, 
+            "symbol": prediction.symbol, 
+            "data": prediction.data,
+            "date_created": prediction.date_created
+            }
         )
     return jsonify(return_list), 200
-
 
 @app.route("/backtests", methods=["GET"])
 def get_backtests():
@@ -116,13 +107,12 @@ def get_prediction(symbol):
     for prediction in predictions:
         if prediction.symbol == symbol:
             return_list.append(
-                {
-                    "id": prediction.id,
-                    "symbol": prediction.symbol,
-                    "data": prediction.data,
-                }
+            {"id": prediction.id, 
+            "symbol": prediction.symbol, 
+            "data": prediction.data,
+            "date_created": prediction.date_created
+            }
             )
-
     prediction = return_list[0] if len(return_list) else None
     print(prediction)
     return jsonify(prediction), 200
