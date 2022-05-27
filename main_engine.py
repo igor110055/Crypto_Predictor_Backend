@@ -886,6 +886,7 @@ def get_results(symbols_list, intervals, strategies):
     # multi_thread_backtests(symbols_strategies)
     return backtest_results, calculated_data
 
+
 print("Started")
 all_fully_set_up_data = {}
 all_set_up_data = {}
