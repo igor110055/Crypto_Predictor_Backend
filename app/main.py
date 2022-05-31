@@ -26,6 +26,7 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
 db = SQLAlchemy(app)
 now = datetime.now()
 
+db.drop_all()
 
 # models
 class Prediction(db.Model):
@@ -56,7 +57,6 @@ class Backtest(db.Model):
 
 
 # Create the table
-db.drop_all()
 db.create_all()
 
 @app.route("/predictions", methods=["GET"])
