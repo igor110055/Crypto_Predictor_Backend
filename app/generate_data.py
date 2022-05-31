@@ -104,7 +104,7 @@ def setup_data_generate():
         time.sleep(1)
         current_time = datetime.now()
         current_minute = current_time.minute
-        if current_minute < 5: #check
+        if current_minute < 1000: #check
             active = False
     # The block of code above helps me ensure the code starts running atleast some minutes close
     # to the nearest hr. pending when replaced with apscheduler. It waits until the time is within the first 0 - 4 minutes of the closest hr.
@@ -113,7 +113,7 @@ def setup_data_generate():
     while active:
         start = datetime.now()
         print("Waiting for 4 minutes.")
-        for i in range(240): # wait additional 4 minutes cause sometimes, updates from binance take time.
+        for i in range(1): # check # wait additional 4 minutes cause sometimes, updates from binance take time.
             time.sleep(1)
         generate_data()
         end = datetime.now()
