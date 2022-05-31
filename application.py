@@ -6,6 +6,8 @@ from sqlalchemy import event, JSON, ARRAY
 from sqlalchemy.engine import Engine
 from flask_sqlalchemy import SQLAlchemy
 import time
+import threading
+from generate_data import setup_data_generate
 
 app = Flask(__name__)
 CORS(app)
@@ -152,4 +154,23 @@ def get_backtest(symbol_strategy):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    backtestThreads = []
+    backtestThread_app = threading.Thread(
+        target=app.run, kwargs={"debug": true}
+    )
+    backtestThreads.append(backtestThread_app)
+    backtestThread_app.start()
+    backtestThread_data = threading.Thread(
+        target=setup_data_generate
+    )
+    backtestThreads.append(backtestThread_data)
+    backtestThread_data.start()
+    for backtestThread in backtestThreads:
+        backtestThread.join()
+    # app.run(debug=True)
+    # print("Yeah")
+    # active = True
+    # while active:
+    #     check()
+    #     for i in range(20):
+    #         time.sleep(1)
