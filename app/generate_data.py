@@ -60,7 +60,7 @@ def generate_data():
         "prXXcmf",
     ]
 
-    results, calculated_data = get_results(symbols_list, intervals, strategies)
+    results, calculated_data = get_results(symbols_list[:], intervals[:], strategies[:]) # check
     for symbol, dataset in calculated_data.items():
         now = datetime.now()
         print(now)
@@ -104,7 +104,7 @@ def setup_data_generate():
         time.sleep(1)
         current_time = datetime.now()
         current_minute = current_time.minute
-        if current_minute < 5:
+        if current_minute < 5: #check
             active = False
     # The block of code above helps me ensure the code starts running atleast some minutes close
     # to the nearest hr. pending when replaced with apscheduler. It waits until the time is within the first 0 - 4 minutes of the closest hr.
@@ -112,7 +112,7 @@ def setup_data_generate():
     active = True
     while active:
         start = datetime.now()
-        for i in range(240): # wait additional 4 minutes cause sometimes, updates from binance take time.
+        for i in range(2): # check # wait additional 4 minutes cause sometimes, updates from binance take time.
             time.sleep(1)
         generate_data()
         end = datetime.now()

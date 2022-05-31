@@ -44,6 +44,8 @@ def get_symbol_interval(symbol):
         return symbol.replace("4h", ""), "4h"
     elif "6h" in symbol:
         return symbol.replace("6h", ""), "6h"
+    elif "8h" in symbol:
+        return symbol.replace("8h", ""), "8h"
     elif "1d" in symbol:
         return symbol.replace("1d", ""), "1d"
     else:
@@ -874,9 +876,12 @@ def get_results(symbols_list, intervals, strategies):
     # download_symbols(symbols_intervals)
     multi_thread_download(symbols_intervals) 
 
+    print("Setting up: ") # check
     set_up_all_data(symbols_intervals)
+    print("Setting up2: ") # check
     set_up_all_data_fully(symbols_intervals)
 
+    print("Calc alls: ") # check
     calc_alls(
         symbols_intervals
     )  # improve multithreading and use multi_thread_calculations instead
@@ -884,6 +889,7 @@ def get_results(symbols_list, intervals, strategies):
     # execute faster than the multi threaded counterparts I've made.
     # multi_thread_calculations(symbols_intervals)
 
+    print("Backtests: ") # check
     backtests(symbols_strategies)
     # multi_thread_backtests(symbols_strategies)
     return backtest_results, calculated_data
