@@ -35,16 +35,16 @@ db = SQLAlchemy(app)
 def generate_data():
     print('Generating New data')
     symbols_list = [
-        "ENJUSDT",
         "BTCUSDT",
-        "EOSUSDT",
-        "ONTUSDT",
-        "XRPUSDT",
-        "AXSUSDT",
-        "CHZUSDT",
         "ETHUSDT",
         "BNBUSDT",
+        "ADAUSDT",
+        "XRPUSDT",
+        "SOLUSDT",
+        "DOGEUSDT",
         "MATICUSDT",
+        "THETAUSDT",
+        "CHZUSDT",
     ]
     # intervals = ["1h", "15m", "30m", "1h", "1d", "5m", "4h"]
     intervals = ["1h", "2h", "4h", "8h", "12h", "1d"]
@@ -60,7 +60,7 @@ def generate_data():
         "prXXcmf",
     ]
 
-    results, calculated_data = get_results(symbols_list[:5], intervals[:1], strategies[:1])
+    results, calculated_data = get_results(symbols_list, intervals, strategies)
     for symbol, dataset in calculated_data.items():
         now = datetime.now()
         print(now)
@@ -104,7 +104,6 @@ def setup_data_generate():
         time.sleep(1)
         current_time = datetime.now()
         current_minute = current_time.minute
-        print("waiting: ", current_minute)
         if current_minute < 5:
             active = False
     # The block of code above helps me ensure the code starts running atleast some minutes close
@@ -113,7 +112,6 @@ def setup_data_generate():
     active = True
     while active:
         start = datetime.now()
-        print("running again: ", start)
         for i in range(240): # wait additional 4 minutes cause sometimes, updates from binance take time.
             time.sleep(1)
         generate_data()
