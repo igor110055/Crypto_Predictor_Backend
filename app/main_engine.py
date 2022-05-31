@@ -872,7 +872,7 @@ def get_results(symbols_list, intervals, strategies):
         symbols_strategies.append(symbol + interval + "_" + strategy)
 
     # download_symbols(symbols_intervals)
-    # multi_thread_download(symbols_intervals) 
+    multi_thread_download(symbols_intervals) 
 
     set_up_all_data(symbols_intervals)
     set_up_all_data_fully(symbols_intervals)

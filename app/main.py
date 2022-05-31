@@ -117,7 +117,6 @@ def get_prediction(symbol):
             }
             )
     prediction = return_list[0] if len(return_list) else None
-    print(prediction)
     return jsonify(prediction), 200
 
 
