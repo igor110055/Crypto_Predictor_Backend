@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from sqlite3 import Connection as SQLite3Connection
 from datetime import datetime
 from sqlalchemy import event, JSON, ARRAY
@@ -7,6 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 import time
 
 app = Flask(__name__)
+CORS(app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlitedb.file"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = 0
