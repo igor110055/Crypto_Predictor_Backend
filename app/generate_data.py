@@ -60,7 +60,7 @@ def generate_data():
         "prXXcmf",
     ]
 
-    results, calculated_data = get_results(symbols_list[:], intervals[:], strategies[:]) # check
+    results, calculated_data = get_results(symbols_list[:3], intervals[:2], strategies[:2]) # check
     for symbol, dataset in calculated_data.items():
         now = datetime.now()
         print(now)
@@ -112,7 +112,8 @@ def setup_data_generate():
     active = True
     while active:
         start = datetime.now()
-        for i in range(2): # check # wait additional 4 minutes cause sometimes, updates from binance take time.
+        print("Waiting for 4 minutes.")
+        for i in range(240): # wait additional 4 minutes cause sometimes, updates from binance take time.
             time.sleep(1)
         generate_data()
         end = datetime.now()
