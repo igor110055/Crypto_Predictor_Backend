@@ -1,15 +1,17 @@
 from random import randrange
 from sqlite3 import Connection as SQLite3Connection
 from datetime import datetime, timedelta
-from main_engine import get_results
 from sqlalchemy import event, create_engine
 from sqlalchemy.engine import Engine
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-import application
 import pandas as pd
 import time
 import random
+
+
+from app.main_engine import get_results
+import app.main as application
 
 
 # app
@@ -58,7 +60,7 @@ def generate_data():
         "prXXcmf",
     ]
 
-    results, calculated_data = get_results(symbols_list[:1], intervals[:1], strategies[:1])
+    results, calculated_data = get_results(symbols_list[:5], intervals[:1], strategies[:1])
     for symbol, dataset in calculated_data.items():
         now = datetime.now()
         print(now)
@@ -121,7 +123,5 @@ def setup_data_generate():
         handle_miniseconds = random.choice([2, -2]) 
         actual_wait_time = (wait_time - time_taken) + handle_miniseconds # minus or add 2 seconds to handle miniseconds. this way, the time difference always remain close to the actual wait time needed
         print("Next Update: ", datetime.now() + timedelta(seconds=actual_wait_time), "seconds, took: ", time_taken)
-        for i in range(actual_wait_time):
+        for i in range(actual_wait_time): 
             time.sleep(1)
-
-setup_data_generate()
