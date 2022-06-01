@@ -10,8 +10,8 @@ import time
 import random
 
 
-from app.main_engine import get_results
-import app.main as application
+from main_engine import get_results
+import main as application
 
 
 # app
@@ -125,3 +125,5 @@ def setup_data_generate():
         print("Next Update: ", datetime.now() + timedelta(seconds=actual_wait_time), "seconds, took: ", time_taken)
         for i in range(actual_wait_time): 
             time.sleep(1)
+
+setup_data_generate()
