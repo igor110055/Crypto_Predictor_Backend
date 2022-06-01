@@ -2,11 +2,11 @@ import threading
 from app.main import app
 from app.generate_data import setup_data_generate
 
-def run_application():
-    print("WSGI running...")
+def run_application(environs, response):
+    print("WSGI running...", locals())
     backtestThreads = []
     backtestThread_app = threading.Thread(
-        target=app.run
+        target=app.run, args=(environs, response)
     )
     backtestThreads.append(backtestThread_app)
     backtestThread_app.start()
