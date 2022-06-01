@@ -31,7 +31,7 @@ class Prediction(db.Model):
     __tablename__ = "Prediction"
     id = db.Column(db.Integer, primary_key=True)
     symbol = db.Column(db.String(50))
-    date_created = db.Column(db.Date)
+    date_created = db.Column(db.DateTime)
     data = db.Column(JSON)
 
 class Backtest(db.Model):
@@ -40,9 +40,9 @@ class Backtest(db.Model):
     symbol = db.Column(db.String(50))
     symbol_strategy = db.Column(db.String(50))
     strategy = db.Column(db.String(50))
-    date_created = db.Column(db.Date)
-    start_date = db.Column(db.Date)
-    end_date = db.Column(db.Date)
+    date_created = db.Column(db.DateTime)
+    start_date = db.Column(db.DateTime)
+    end_date = db.Column(db.DateTime)
     percentage_exposure_time = db.Column(db.Float)
     percentage_returns = db.Column(db.Float)
     percentage_buy_and_hold_return = db.Column(db.Float)
