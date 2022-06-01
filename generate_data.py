@@ -30,9 +30,7 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
 
 db = SQLAlchemy(app)
 
-f = open("app/myfile.txt", "x")
 def generate_data():
-    f = open("app/myfile2.txt", "x")
     print('Generating New data')
     symbols_list = [
         "BTCUSDT",
