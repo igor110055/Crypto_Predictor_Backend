@@ -54,11 +54,12 @@ class Backtest(db.Model):
     profit_factor = db.Column(db.Float)
 
 # Create the table
-# db.drop_all()
-# try:
-#   db.create_all()
-# except:
-#   print(Prediction.query.all(), "Prediction List")
+db.drop_all()
+try:
+  db.create_all()
+except:
+  print(Prediction.query.all(), "Prediction List")
+
 
 print("Main Up and Running...")
 

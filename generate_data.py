@@ -17,7 +17,7 @@ import app.main as application
 # app
 app = Flask(__name__)
 # config
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlitedb.file"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app/sqlitedb.file"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = 0
 
 # configure sqlite3 to enforce foreign key contraints
@@ -126,6 +126,6 @@ def setup_data_generate():
         for i in range(actual_wait_time): 
             time.sleep(1)
 
-if __init__ == "__main__":
+if __name__ == "__main__":
     print("Generating...")
     generate_data()

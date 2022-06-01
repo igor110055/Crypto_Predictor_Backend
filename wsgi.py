@@ -1,5 +1,6 @@
 import threading
 from app.main import app
+app.run()
 # from app.generate_data import setup_data_generate
 
 # def run_application(environs, response):
