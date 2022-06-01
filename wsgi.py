@@ -2,9 +2,7 @@ import threading
 from app.main import app
 from app.generate_data import setup_data_generate
 
-def wysiwyg():
-    print("Hello...")
-if __name__ == "__main__":
+def run_application():
     print("WSGI running...")
     backtestThreads = []
     backtestThread_app = threading.Thread(

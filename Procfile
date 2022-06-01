@@ -1,1 +1,1 @@
-web: gunicorn wsgi:wysiwyg
+web: gunicorn wsgi:run_application
