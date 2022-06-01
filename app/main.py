@@ -58,7 +58,9 @@ db.drop_all()
 try:
   db.create_all()
 except:
-  print(Prediction.query.all())
+  print(Prediction.query.all(), "Prediction List")
+
+print("Main Up and Running...")
 
 @app.route("/predictions", methods=["GET"])
 def get_predictions():
