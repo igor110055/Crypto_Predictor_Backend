@@ -56,7 +56,10 @@ class Backtest(db.Model):
 
 # Create the table
 db.drop_all()
-db.create_all()
+try:
+  db.create_all()
+except:
+  print(Prediction.query.all())
 
 @app.route("/predictions", methods=["GET"])
 def get_predictions():
