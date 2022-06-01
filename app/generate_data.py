@@ -98,6 +98,7 @@ def generate_data():
     print("Done!")
 
 def setup_data_generate():
+    print("Generating...")
     # To replace this with apscheduler
     active = True
     while active:
@@ -112,8 +113,8 @@ def setup_data_generate():
     active = True
     while active:
         start = datetime.now()
-        print("Waiting for 4 minutes.")
         for i in range(1): # check # wait additional 4 minutes cause sometimes, updates from binance take time.
+            print("Waiting for 4 minutes.")
             time.sleep(1)
         generate_data()
         end = datetime.now()

@@ -53,7 +53,6 @@ class Backtest(db.Model):
     trade_percentage_expectancy = db.Column(db.Float)
     profit_factor = db.Column(db.Float)
 
-
 # Create the table
 db.drop_all()
 try:
@@ -63,6 +62,7 @@ except:
 
 @app.route("/predictions", methods=["GET"])
 def get_predictions():
+    print("Getting Predictions")
     predictions = Prediction.query.all()
     return_list = []
     print(predictions)
