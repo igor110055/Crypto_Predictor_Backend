@@ -26,8 +26,6 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
 db = SQLAlchemy(app)
 now = datetime.now()
 
-db.drop_all()
-
 # models
 class Prediction(db.Model):
     __tablename__ = "Prediction"
