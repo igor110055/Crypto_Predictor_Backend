@@ -6,10 +6,13 @@ sched = BlockingScheduler()
 
 start = datetime.now() + timedelta(minutes=1)
 print("Yet to: ", datetime.now())
-print(start, type(start))
-@sched.scheduled_job('interval', start_date=start, hours=1)
+print(start)
+
+
+@sched.scheduled_job("interval", start_date=start, hours=1)
 def timed_job():
     print("Running: ", datetime.now())
     generate_data()
+
 
 sched.start()

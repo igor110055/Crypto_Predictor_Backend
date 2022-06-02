@@ -34,6 +34,16 @@ class Prediction(db.Model):
     date_created = db.Column(db.DateTime)
     data = db.Column(JSON)
 
+
+# class Users(db.Model):
+#     __tablename__ = "Users"
+#     index = db.Column(db.Integer, primary_key=True)
+#     name = db.Column(db.String(50))
+#     # symbol = db.Column(db.String(50))
+#     date_created = db.Column(db.DateTime)
+# data = db.Column(JSON)
+
+
 class Backtest(db.Model):
     __tablename__ = "Backtest"
     id = db.Column(db.Integer, primary_key=True)
@@ -53,15 +63,17 @@ class Backtest(db.Model):
     trade_percentage_expectancy = db.Column(db.Float)
     profit_factor = db.Column(db.Float)
 
+
 # Create the table
-# db.drop_all()
-# try:
-#   db.create_all()
-# except:
-#   print(Prediction.query.all(), "Prediction List")
+db.drop_all()
+try:
+    db.create_all()
+except:
+    print(Prediction.query.all(), "Prediction List")
 
 
 print("Main Up and Running...")
+
 
 @app.route("/predictions", methods=["GET"])
 def get_predictions():
@@ -71,13 +83,15 @@ def get_predictions():
     print(predictions)
     for prediction in predictions:
         return_list.append(
-            {"id": prediction.id, 
-            "symbol": prediction.symbol, 
-            "data": prediction.data,
-            "date_created": prediction.date_created
+            {
+                "id": prediction.id,
+                "symbol": prediction.symbol,
+                "data": prediction.data,
+                "date_created": prediction.date_created,
             }
         )
     return jsonify(return_list), 200
+
 
 @app.route("/backtests", methods=["GET"])
 def get_backtests():
@@ -114,11 +128,12 @@ def get_prediction(symbol):
     for prediction in predictions:
         if prediction.symbol == symbol:
             return_list.append(
-            {"id": prediction.id, 
-            "symbol": prediction.symbol, 
-            "data": prediction.data,
-            "date_created": prediction.date_created
-            }
+                {
+                    "id": prediction.id,
+                    "symbol": prediction.symbol,
+                    "data": prediction.data,
+                    "date_created": prediction.date_created,
+                }
             )
     prediction = return_list[0] if len(return_list) else None
     return jsonify(prediction), 200
@@ -153,3 +168,24 @@ def get_backtest(symbol_strategy):
 
     backtest = return_list[0] if len(return_list) else None
     return jsonify(backtest), 200
+
+
+@app.route("/names", methods=["GET"])
+def get_names():
+    print("Getting Names")
+    predictions = Users.query.all()
+    return_list = []
+    print(predictions)
+    for prediction in predictions:
+        return_list.append(
+            {
+                "id": prediction.index,
+                "name": prediction.name,
+            }
+        )
+    return jsonify(return_list), 200
+
+
+if __name__ == "__main__":
+    print("Running Main")
+    app.run(debug=True)

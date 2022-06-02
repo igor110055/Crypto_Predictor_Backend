@@ -56,24 +56,24 @@ def get_strategy(symbol):
     """Given a 'symbol' eg -> 'BTCUSDT1h_prXX'
     it returns -> 'BTCUSDT1h', 'prXX'
     """
-    if "_prXXcmf" in symbol:
-        return symbol.replace("_prXXcmf", ""), "prXX"
-    elif "_trail_stop" in symbol:
-        return symbol.replace("_trail_stop", ""), "trail_stop"
-    elif "_prXX" in symbol:
-        return symbol.replace("_prXX", ""), "prXX"
-    elif "_prX" in symbol:
-        return symbol.replace("_prX", ""), "prX"
-    elif "_cmf" in symbol:
-        return symbol.replace("_cmf", ""), "cmf"
-    elif "_PositionPR" in symbol:
-        return symbol.replace("_PositionPR", ""), "PositionPR"
-    elif "_Strategy2" in symbol:
-        return symbol.replace("_Strategy2", ""), "Strategy2"
-    elif "_PositionEMA" in symbol:
-        return symbol.replace("_PositionEMA", ""), "PositionEMA"
-    elif "_PositionMACD" in symbol:
-        return symbol.replace("_PositionMACD", ""), "PositionMACD"
+    if "_MACDStrategy" in symbol:
+        return symbol.replace("_MACDStrategy", ""), "MACDStrategy"
+    elif "_EMAStrategy" in symbol:
+        return symbol.replace("_EMAStrategy", ""), "EMAStrategy"
+    elif "_TrailStopATRStrategy" in symbol:
+        return symbol.replace("_TrailStopATRStrategy", ""), "TrailStopATRStrategy"
+    elif "_PSARStrategy" in symbol:
+        return symbol.replace("_PSARStrategy", ""), "PSARStrategy"
+    elif "_TEMStrategy" in symbol:
+        return symbol.replace("_TEMStrategy", ""), "TEMStrategy"
+    elif "_PTStrategy" in symbol:
+        return symbol.replace("_PTStrategy", ""), "PTStrategy"
+    elif "_XStrategy" in symbol:
+        return symbol.replace("_XStrategy", ""), "XStrategy"
+    elif "_AroonStrategy" in symbol:
+        return symbol.replace("_AroonStrategy", ""), "AroonStrategy"
+    elif "_XAroonStrategy" in symbol:
+        return symbol.replace("_XAroonStrategy", ""), "XAroonStrategy"
     else:
         return symbol
 
@@ -308,7 +308,7 @@ def request_download(url, headers=None):
         except requests.exceptions.RequestException as err:
             print(f"Couldn't Get Request: {err}", file=sys.stderr)
             count += 1
-            if count == 1:
+            if count == 5:
                 print(
                     "Process Terminated, Check Internet Connectivity and Try Again!!!",
                     file=sys.stderr,
@@ -338,7 +338,7 @@ def get_klines(symbol, interval, limit=1000):
     dataset = pd.DataFrame(
         res.json(),
         columns=[
-            "openTime",
+            "open_time",
             "open",
             "high",
             "low",
@@ -353,8 +353,8 @@ def get_klines(symbol, interval, limit=1000):
         ],
     )
     dataset.drop(["ignore"], axis=1, inplace=True)
-    dataset["openTime"] = pd.to_datetime(
-        dataset["openTime"] * 1000000, utc="True"
+    dataset["open_time"] = pd.to_datetime(
+        dataset["open_time"] * 1000000, utc="True"
     ).dt.tz_convert("Africa/Lagos")
     dataset["closeTime"] = pd.to_datetime(
         dataset["closeTime"] * 1000000, utc="True"
@@ -402,19 +402,20 @@ def set_up_data(symbol, vwap=1, win=24):
     # dataset = pickle.load(pkl_file)
     # pkl_file.close()
 
-    dataset["openTime"] = pd.to_datetime(dataset["openTime"])
+    dataset["open_time_index"] = pd.to_datetime(dataset["open_time"])
+    dataset["open_time"] = pd.to_datetime(dataset["open_time"])
     dataset["closeTime"] = pd.to_datetime(dataset["closeTime"])
-    dataset["closecheck"] = pd.to_numeric(dataset["close"], errors="coerce")
+    dataset["close_price"] = pd.to_numeric(dataset["close"], errors="coerce")
+    dataset["opencheck"] = pd.to_numeric(dataset["open"], errors="coerce")
     dataset["close"] = pd.to_numeric(dataset["open"], errors="coerce")
     dataset["high"] = pd.to_numeric(dataset["high"], errors="coerce")
     dataset["low"] = pd.to_numeric(dataset["low"], errors="coerce")
     dataset["open"] = pd.to_numeric(dataset["close"], errors="coerce")
-    dataset["opencheck"] = pd.to_numeric(dataset["open"], errors="coerce")
     # Close, High, Low, Open, symbol -> for backtests
     dataset["Close"] = pd.to_numeric(dataset["opencheck"], errors="coerce")
     dataset["High"] = pd.to_numeric(dataset["high"], errors="coerce")
     dataset["Low"] = pd.to_numeric(dataset["low"], errors="coerce")
-    dataset["Open"] = pd.to_numeric(dataset["closecheck"], errors="coerce")
+    dataset["Open"] = pd.to_numeric(dataset["close_price"], errors="coerce")
     dataset["Volume"] = pd.to_numeric(dataset["volume"], errors="coerce")
     dataset["symbol"] = symbol
     dataset["volume"] = pd.to_numeric(dataset["volume"], errors="coerce")
@@ -426,10 +427,10 @@ def set_up_data(symbol, vwap=1, win=24):
             volume=dataset["Volume"],
             window=win,
         )
-    dataset.set_index("openTime", inplace=True)
+    dataset.set_index("open_time_index", inplace=True)
 
     # calculates and sets up heiken data
-    datasets = dataset[["opencheck", "High", "Low", "closecheck"]]
+    datasets = dataset[["opencheck", "High", "Low", "close_price"]]
     datasets.columns = ["Open", "High", "Low", "Close"]
     datasets_ha = datasets.copy()
     for i in range(datasets_ha.shape[0]):
@@ -457,37 +458,39 @@ def set_up_full_data(
     """Sets up data table to be used with both default values and some values from indicators"""
     global all_set_up_data
     # To replace hard coded values with values from optional arguments: future work
+    # uncommented code not required at present: future work
     if new:
         dataset = set_up_data(symbol, vwap=vwap, win=win)
     else:
         dataset = all_set_up_data[symbol].copy()
     my_indicators = Fin_Indicator(dataset)
-    weighted_close = my_indicators.weighted_close_fxn()
-    dataset["weighted_close"] = weighted_close
-    dataset["vwap"] = my_indicators.return_vwap()
-    dataset["SMA1"] = my_indicators.sma(period=12)
-    dataset["SMA2"] = my_indicators.sma(period=24)
+
+    # weighted_close = my_indicators.weighted_close_fxn()
+    # dataset["weighted_close"] = weighted_close
+    # dataset["vwap"] = my_indicators.return_vwap()
+    dataset["fast_ma"] = my_indicators.ema(period=6, weights=1)
+    dataset["slow_ma"] = my_indicators.ema(period=28, weights=1)
     upperband, middleband, lowerband = my_indicators.bbands(typ=typ)
     dataset["BBupperband"] = upperband
     dataset["BBlowerband"] = lowerband
     dataset["BBmiddleband"] = middleband
-    dataset["EMASpan1"] = my_indicators.ema(period=12)
-    dataset["EMASpan2"] = my_indicators.ema(period=24)
+    # dataset["EMASpan1"] = my_indicators.ema(period=12)
+    # dataset["EMASpan2"] = my_indicators.ema(period=24)
     dataset["psar"] = my_indicators.psar(iaf=fai, maxaf=afmax)
     (
         dataset["macd"],
-        dataset["macdsignal"],
+        dataset["macd_signal"],
         dataset["macdhist"],
     ) = my_indicators.macd(int1=6, int2=24, macdint=9)
     dataset["rsi"] = my_indicators.rsi(window_length=24)
     dataset["atr"] = my_indicators.atr(n=7)
-    dataset["mom"] = my_indicators.mom(period=24)
-    (
-        dataset["stochf_fastk"],
-        dataset["stochf_fastd"],
-        dataset["stoch_slowk"],
-        dataset["stoch_slowd"],
-    ) = my_indicators.stochastics()
+    # dataset["mom"] = my_indicators.mom(period=24)
+    # (
+    #     dataset["stochf_fastk"],
+    #     dataset["stochf_fastd"],
+    #     dataset["stoch_slowk"],
+    #     dataset["stoch_slowd"],
+    # ) = my_indicators.stochastics()
     return dataset
 
 
@@ -514,7 +517,8 @@ def return_best_rsi(symbol, new=0):
         data.dropna(inplace=True)
         data["Returns"] = np.log(data["close"] / data["close"].shift(1))
         #         v["Returns"] = data["Returns"]
-        weighted_close = my_indicators.weighted_close_fxn()
+        # uncommented code not required at present: future work
+        # weighted_close = my_indicators.weighted_close_fxn()
         data["rsi"] = my_indicators.rsi(window_length=24)
         data["Position"] = np.where((data["rsi"] < SMA1), 1, np.nan)
         data["Position"] = np.where((data["rsi"] > SMA2), -1, data["Position"])
@@ -548,7 +552,7 @@ def trail_stop(symbol, multiplier, vwap=None, win=14, new=0):
     vc["close"] = dataset["close"]
     ac = []
     vc.dropna(inplace=True)
-    vc["rsi"] = my_indicators.rsi(window_length=24)
+    vc["rsi"] = dataset["rsi"]
     smas = return_best_rsi(symbol)
     SMA1 = int(smas["SMA1"])
     SMA2 = int(smas["SMA2"])
@@ -608,38 +612,41 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14, new=0):
         dataset[
             [
                 "close",
-                "weighted_close",
-                "closeTime",
+                "open_time",
                 "low",
                 "high",
-                "closecheck",
+                "close_price",
                 "opencheck",
-                "vwap",
                 "open",
                 "macd",
-                "macdsignal",
-                "macdhist",
+                "macd_signal",
                 "psar",
                 "BBmiddleband",
+                "fast_ma",
+                "slow_ma",
             ]
         ].copy()
     )
-    clean_data["closeTime"] = clean_data["closeTime"].dt.strftime('%Y-%m-%d %H:%M:%S') # to enable json serialization for sql parsing. 
+    clean_data["open_time"] = clean_data["open_time"].dt.strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )  # to enable json serialization for sql parsing.
     # if required to be pure timestamp, revisit: future work
-    (
-        clean_data["kijun_sen"],
-        clean_data["tenkan_sen"],
-        clean_data["chikou_span"],
-        clean_data["senkou_span_a"],
-        clean_data["senkou_span_b"],
-    ) = my_indicators.ichimoku_cloud(kijun_lag=kijun)
+
+    # Uncomment if building an ichimoku cloud strategy: future work
+    # (
+    #     clean_data["kijun_sen"],
+    #     clean_data["tenkan_sen"],
+    #     clean_data["chikou_span"],
+    #     clean_data["senkou_span_a"],
+    #     clean_data["senkou_span_b"],
+    # ) = my_indicators.ichimoku_cloud(kijun_lag=kijun)
 
     # MACD Strategy
     #  check EMA Strategy to set up macd and macdsignals using preferred values
     dataset_copy = dataset.copy()
 
     dataset_copy["Position"] = np.where(
-        dataset_copy["macd"] > dataset_copy["macdsignal"], 1, -1
+        dataset_copy["macd"] > dataset_copy["macd_signal"], 1, -1
     )
     dataset_copy["Position"].bfill(inplace=True)
     dataset_copy["Position"].ffill(inplace=True)
@@ -656,11 +663,11 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14, new=0):
     SMA1 = 6  # interval 1, both intervals to be replaced with a function that determines the best interval to use, as well as what attributes to use between com, halflife and span(span is used for now as is below): future work
     SMA2 = 28  # interval 2
 
-    dataset_copy["SMA1"] = my_indicators.ema(period=SMA1, weights=1)
-    dataset_copy["SMA2"] = my_indicators.ema(period=SMA2, weights=1)
+    # dataset_copy["fast_ma"] = my_indicators.ema(period=SMA1, weights=1) # already set by set_up_full_data function
+    # dataset_copy["slow_ma"] = my_indicators.ema(period=SMA2, weights=1)
 
     dataset_copy["Position"] = np.where(
-        dataset_copy["SMA1"] > dataset_copy["SMA2"], 1, -1
+        dataset_copy["fast_ma"] > dataset_copy["slow_ma"], 1, -1
     )
     dataset_copy["Position"].bfill(inplace=True)
     dataset_copy["Position"].ffill(inplace=True)
@@ -700,7 +707,7 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14, new=0):
         (clean_data["prX"] == 1)
         & (clean_data["low"] < clean_data["BBmiddleband"])
         & (clean_data["high"] > clean_data["BBmiddleband"])
-        & (clean_data["closecheck"] > clean_data["opencheck"]),
+        & (clean_data["close_price"] > clean_data["opencheck"]),
         1,
         np.nan,
     )
@@ -708,17 +715,17 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14, new=0):
         (clean_data["prX"] == -1)
         & (clean_data["low"] < clean_data["BBmiddleband"])
         & (clean_data["high"] > clean_data["BBmiddleband"])
-        & (clean_data["closecheck"] < clean_data["opencheck"]),
+        & (clean_data["close_price"] < clean_data["opencheck"]),
         -1,
         clean_data["prXX"],
     )
 
     # cmf Strategy
     clean_data["trend_aroon_up"] = ta.trend.aroon_up(
-        close=clean_data["closecheck"], window=12
+        close=clean_data["close_price"], window=12
     )
     clean_data["trend_aroon_down"] = ta.trend.aroon_down(
-        close=clean_data["closecheck"], window=12
+        close=clean_data["close_price"], window=12
     )
 
     clean_data["cmf"] = np.where(
@@ -741,9 +748,43 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14, new=0):
         (clean_data["prXX"] == 1) & (clean_data["cmf"] == 1), 1, -1
     )
 
+    # drop columns not needed at present, comment for: future work
+    clean_data.drop(
+        [
+            "BBmiddleband",
+            "close",
+            "low",
+            "high",
+            "opencheck",
+            "open",
+            "trend_aroon_up",
+            "trend_aroon_down",
+        ],
+        axis=1,
+        inplace=True,
+    )
+
     # forward and backward fills nan values
     clean_data.ffill(inplace=True)
     clean_data.bfill(inplace=True)
+
+    # Rename Strategies
+    clean_data.rename(
+        columns={
+            "PositionMACD": "MACDStrategy",
+            "PositionEMA": "EMAStrategy",
+            "trail_stop": "TrailStopATRStrategy",
+            "PositionPR": "PSARStrategy",
+            "Strategy2": "TEMStrategy",
+            "prX": "PTStrategy",
+            "prXX": "XStrategy",
+            "cmf": "AroonStrategy",
+            "prXXcmf": "XAroonStrategy",
+        },
+        inplace=True,
+    )
+    # TEMStrategy -> Trail Stop, EMA, MACD strategies: in form of elements put together to form it. Explain more in documentation if possible
+    # PTStrategy -> PSAR and TEM Strategies, XStrategy: X represents the multiple elements involved in its formation.
 
     return clean_data
 
@@ -874,14 +915,14 @@ def get_results(symbols_list, intervals, strategies):
         symbols_strategies.append(symbol + interval + "_" + strategy)
 
     # download_symbols(symbols_intervals)
-    multi_thread_download(symbols_intervals) 
+    multi_thread_download(symbols_intervals)
 
-    print("Setting up: ") # check
+    print("Setting up: ")  # check
     set_up_all_data(symbols_intervals)
-    print("Setting up2: ") # check
+    print("Setting up2: ")  # check
     set_up_all_data_fully(symbols_intervals)
 
-    print("Calc alls: ") # check
+    print("Calc alls: ")  # check
     calc_alls(
         symbols_intervals
     )  # improve multithreading and use multi_thread_calculations instead
@@ -889,10 +930,11 @@ def get_results(symbols_list, intervals, strategies):
     # execute faster than the multi threaded counterparts I've made.
     # multi_thread_calculations(symbols_intervals)
 
-    print("Backtests: ") # check
+    print("Backtests: ")  # check
     backtests(symbols_strategies)
     # multi_thread_backtests(symbols_strategies)
     return backtest_results, calculated_data
+
 
 all_fully_set_up_data = {}
 all_set_up_data = {}

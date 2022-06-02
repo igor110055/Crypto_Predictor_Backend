@@ -37,6 +37,7 @@ class Prediction(db.Model):
     date_created = db.Column(db.Date)
     data = db.Column(JSON)
 
+
 class Backtest(db.Model):
     __tablename__ = "Backtest"
     id = db.Column(db.Integer, primary_key=True)
@@ -61,6 +62,7 @@ class Backtest(db.Model):
 db.drop_all()
 db.create_all()
 
+
 @app.route("/predictions", methods=["GET"])
 def get_predictions():
     predictions = Prediction.query.all()
@@ -68,13 +70,15 @@ def get_predictions():
     print(predictions)
     for prediction in predictions:
         return_list.append(
-            {"id": prediction.id, 
-            "symbol": prediction.symbol, 
-            "data": prediction.data,
-            "date_created": prediction.date_created
+            {
+                "id": prediction.id,
+                "symbol": prediction.symbol,
+                "data": prediction.data,
+                "date_created": prediction.date_created,
             }
         )
     return jsonify(return_list), 200
+
 
 @app.route("/backtests", methods=["GET"])
 def get_backtests():
@@ -111,11 +115,12 @@ def get_prediction(symbol):
     for prediction in predictions:
         if prediction.symbol == symbol:
             return_list.append(
-            {"id": prediction.id, 
-            "symbol": prediction.symbol, 
-            "data": prediction.data,
-            "date_created": prediction.date_created
-            }
+                {
+                    "id": prediction.id,
+                    "symbol": prediction.symbol,
+                    "data": prediction.data,
+                    "date_created": prediction.date_created,
+                }
             )
     prediction = return_list[0] if len(return_list) else None
     print(prediction)
@@ -155,22 +160,11 @@ def get_backtest(symbol_strategy):
 
 if __name__ == "__main__":
     backtestThreads = []
-    backtestThread_app = threading.Thread(
-        target=app.run, kwargs={"debug": true}
-    )
+    backtestThread_app = threading.Thread(target=app.run, kwargs={"debug": true})
     backtestThreads.append(backtestThread_app)
     backtestThread_app.start()
-    backtestThread_data = threading.Thread(
-        target=setup_data_generate
-    )
+    backtestThread_data = threading.Thread(target=setup_data_generate)
     backtestThreads.append(backtestThread_data)
     backtestThread_data.start()
     for backtestThread in backtestThreads:
         backtestThread.join()
-    # app.run(debug=True)
-    # print("Yeah")
-    # active = True
-    # while active:
-    #     check()
-    #     for i in range(20):
-    #         time.sleep(1)
