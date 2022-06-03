@@ -15,42 +15,6 @@ import app.main as application
 
 dataset_num = 300  # Number of Prediction Data points to send to database. Currently, the number of data points is 1000: set by limit in main_engine.get_klines function.
 
-
-# app
-app = Flask(__name__)
-# config
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app/sqlitedb.file"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = 0
-
-# configure sqlite3 to enforce foreign key contraints
-@event.listens_for(Engine, "connect")
-def _set_sqlite_pragma(dbapi_connection, connection_record):
-    if isinstance(dbapi_connection, SQLite3Connection):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON;")
-        cursor.close()
-
-
-db = SQLAlchemy(app)
-
-# Setting up to use pd.DataFrame.to_sql
-# from sqlalchemy import create_engine
-# engine = create_engine('sqlite:///app/sqlitedb.file', echo=False)
-
-# df = pd.DataFrame({'name' : ['User 1', 'User 2', 'User 3']})
-# df2 = pd.DataFrame()
-# # df2["symbol"] =
-# df.to_sql('Users', con=engine)
-# new_prediction = application.Users(
-#     date_created=datetime.now(),
-#     # symbol = "Ihechi",
-#     # data = dataset.to_dict("list")
-# )
-# db.session.add(new_prediction)
-# db.session.commit()
-# print("Generated")
-
-
 def generate_data():
     print("Generating New data")
     symbols_list = [
@@ -80,11 +44,15 @@ def generate_data():
     ]
 
     results, calculated_data = get_results(
-        symbols_list[:3], intervals[:2], strategies[:1]
+        symbols_list[:3], intervals[:1], strategies[:1]
     )  # check
+
+    # Drop existing data and create new tables so the database only contains fresh values
+    application.db.drop_all()
+    application.db.create_all()
+
     for symbol, dataset in calculated_data.items():
         now = datetime.now()
-        print(now)
         new_prediction = application.Prediction(
             date_created=now,
             symbol=symbol,
@@ -92,8 +60,8 @@ def generate_data():
                 "list"
             ),  # send only 300 data points to database. Most Recent
         )
-        db.session.add(new_prediction)
-        db.session.commit()
+        application.db.session.add(new_prediction)
+        application.db.session.commit()
 
     for symbol_strategy, dataset in results.items():
         now = datetime.now()
@@ -114,8 +82,8 @@ def generate_data():
             trade_percentage_expectancy=dataset["trade_percentage_expectancy"],
             profit_factor=dataset["profit_factor"],
         )
-        db.session.add(new_backtest)
-        db.session.commit()
+        application.db.session.add(new_backtest)
+        application.db.session.commit()
 
     print("Done!")
 

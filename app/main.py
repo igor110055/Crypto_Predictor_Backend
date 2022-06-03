@@ -34,16 +34,6 @@ class Prediction(db.Model):
     date_created = db.Column(db.DateTime)
     data = db.Column(JSON)
 
-
-# class Users(db.Model):
-#     __tablename__ = "Users"
-#     index = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(50))
-#     # symbol = db.Column(db.String(50))
-#     date_created = db.Column(db.DateTime)
-# data = db.Column(JSON)
-
-
 class Backtest(db.Model):
     __tablename__ = "Backtest"
     id = db.Column(db.Integer, primary_key=True)
@@ -62,18 +52,6 @@ class Backtest(db.Model):
     win_rate = db.Column(db.Float)
     trade_percentage_expectancy = db.Column(db.Float)
     profit_factor = db.Column(db.Float)
-
-
-# Create the table
-# db.drop_all()
-# try:
-#     db.create_all()
-# except:
-#     print(Prediction.query.all(), "Prediction List")
-
-
-print("Main Up and Running...")
-
 
 @app.route("/predictions", methods=["GET"])
 def get_predictions():
