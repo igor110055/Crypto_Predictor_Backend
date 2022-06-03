@@ -328,7 +328,7 @@ def request_download(url, headers=None):
 def get_klines(symbol, interval, limit=1000):
     """Fetches kline data from the api used"""
     kline_data = (
-        base_api + f"/api/v1/klines?symbol={symbol}&limit={limit}&interval={interval}"
+        base_api + f"/api/v3/klines?symbol={symbol}&limit={limit}&interval={interval}"
     )
     res = request_download(kline_data)
     if (not res) or (res.status_code != 200):
@@ -780,6 +780,7 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14, new=0):
             "prXX": "XStrategy",
             "cmf": "AroonStrategy",
             "prXXcmf": "XAroonStrategy",
+            "close_price": "close",
         },
         inplace=True,
     )

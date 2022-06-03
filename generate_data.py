@@ -80,7 +80,7 @@ def generate_data():
     ]
 
     results, calculated_data = get_results(
-        symbols_list[:3], intervals[:2], strategies[:2]
+        symbols_list[:3], intervals[:2], strategies[:1]
     )  # check
     for symbol, dataset in calculated_data.items():
         now = datetime.now()

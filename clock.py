@@ -1,12 +1,15 @@
 from apscheduler.schedulers.blocking import BlockingScheduler
 from datetime import datetime, timedelta
-from app.generate_data import generate_data
+from generate_data import generate_data
 
 sched = BlockingScheduler()
 
-start = datetime.now() + timedelta(minutes=1)
-print("Yet to: ", datetime.now())
-print(start)
+
+current_time = datetime.now() 
+current_minute = current_time.minute
+minutes_to_nearest_hour = 1 if (60 - current_minute) > 55 else 62 - current_minute
+start = current_time + timedelta(minutes=minutes_to_nearest_hour )
+print("Starting at: ", start)
 
 
 @sched.scheduled_job("interval", start_date=start, hours=1)

@@ -138,6 +138,6 @@ def setup_data_generate():
             time.sleep(1)
 
 
-if __init__ == "__main__":
+if __name__ == "__main__":
     print("Generating...")
     generate_data()
