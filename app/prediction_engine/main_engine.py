@@ -26,9 +26,10 @@ all_data = {}
 exchange_data = ""
 
 # All : future work should take speed of executions into account, future work, in itself, can also be to speed up execution time
+# future work: use https://github.com/binance/binance-connector-python library and ta
 
 # General Functions
-def get_symbol_interval(symbol):
+def get_symbol_interval(symbol: str):
     """Given a 'symbol' eg -> 'BTCUSDT1h'
     it returns -> 'BTCUSDT', '1h'
     """
@@ -91,12 +92,12 @@ class Fin_Indicator:
         self.volume = self.dataset["volume"]
 
     def weighted_close_fxn(self):
-        """Returns weighted close values of a given dataset"""
+        """Returns a pandas series containing Weighted Close values"""
         weighted_close = (self.high + self.low + (self.close * 2)) / 4
         return weighted_close
 
     def bbands(self, typ="TP", timeperiod=24, num_deviations=2):
-        """Returns Bollinger Bands values of a given dataset"""
+        """Returns a pandas series containing Bollinger Bands values"""
         if typ == "TP":
             typical_price = (self.high + self.low + self.close) / 3
         elif typ == "weighted_close":
@@ -108,6 +109,7 @@ class Fin_Indicator:
         return upperband, middleband, lowerband
 
     def rsi(self, window_length=14):
+        """Returns a pandas series containing Relative Strength Index values"""
         weighted_close = self.weighted_close_fxn()
         delta = weighted_close.diff()
         dUp, dDown = delta.copy(), delta.copy()
@@ -120,9 +122,11 @@ class Fin_Indicator:
         return RSI
 
     def wwma(self, values, n):
+        """Returns a pandas series containing Weighted Moving Average values"""
         return values.ewm(alpha=1 / n, adjust=False).mean()
 
     def atr(self, n=7):
+        """Returns a pandas series containing Average True Range values"""
         data = pd.DataFrame()
         data["tr0"] = abs(self.high - self.low)
         data["tr1"] = abs(self.high - self.close.shift())
@@ -132,11 +136,13 @@ class Fin_Indicator:
         return atr
 
     def sma(self, period):
+        """Returns a pandas series containing Simple Moving Average values"""
         weighted_close = self.weighted_close_fxn()
         smas = weighted_close.ewm(span=period, adjust=False).mean()
         return smas
 
     def ema(self, period, weights=0):
+        """Returns a pandas series containing Exponential Moving Average values"""
         if weights:
             close = self.weighted_close_fxn()
         else:
@@ -151,12 +157,15 @@ class Fin_Indicator:
         return df.assign(vwap=(p * q).cumsum() / q.cumsum())
 
     def return_vwap(self):
+        """Returns a pandas series containing Volume Weighted Average Price values"""
         df = self.dataset.copy()
         df = df.groupby(df.index.date, group_keys=False).apply(self.vwap)
         return df["vwap"]
 
     def macd(self, int1, int2, macdint, weights=0):
-        """int1 - interval/period for the first sma
+        """Returns values for Moving Average Convergence Divergence line, it's signal line and it's histogram
+        ----
+        int1 - interval/period for the first sma
         int2 - interval for the second sma
         macdint - interval for the macd
         weights - to use weighted close or not.
@@ -174,6 +183,7 @@ class Fin_Indicator:
         return dcam, signalmacd, macdhist
 
     def psar(self, iaf=0.0011, maxaf=0.2):
+        """Returns a pandas series containing Parabolic Stop and Reverse values"""
         length = len(self.dataset)
         high = self.high
         low = self.low
@@ -231,6 +241,7 @@ class Fin_Indicator:
         return psar
 
     def mom(self, period=24):
+        """Returns a pandas series containing Momentum Oscillator values"""
         weighted_close = self.weighted_close_fxn()
         x = weighted_close - weighted_close.shift(24)
         return x
@@ -278,6 +289,7 @@ class Fin_Indicator:
         senkou_a_projection=26,
         senkou_b_lag=52,
     ):
+        """Returns Values for Kijun Sen, Tenkan Sen, Chikou Span, Senkou Span A and Senkou Span B"""
         periodk_high = self.high.rolling(window=kijun_lag).max()
         periodk_low = self.high.rolling(window=kijun_lag).min()
         kijun_sen = (periodk_high + periodk_low) / 2
@@ -326,7 +338,7 @@ def request_download(url, headers=None):
 
 
 def get_klines(symbol, interval, limit=1000):
-    """Fetches kline data from the api used"""
+    """Fetches kline data from the API and returns a pandas dataframe containing the values"""
     kline_data = (
         base_api + f"/api/v3/klines?symbol={symbol}&limit={limit}&interval={interval}"
     )
@@ -363,7 +375,7 @@ def get_klines(symbol, interval, limit=1000):
 
 
 def download_symbols(symbols):
-    """Fetches and saves kline data gotten for symbols passed"""
+    """Fetches Kline data for symbols passed and appends them to a dictionary"""
     for symbol in symbols:
         symbol, interval = get_symbol_interval(symbol)
         dataset = get_klines(symbol, interval)
@@ -392,11 +404,15 @@ def multi_thread_download(my_symbols):
 
 def set_up_data(symbol, vwap=1, win=24):
     """Sets up data table to be used for predictions with default values"""
-    print("Uncomment the following block of code when moving to production: set_up_data()")
+    print(
+        "Uncomment the following block of code when moving to production: set_up_data()"
+    )
     # global all_data
     # dataset = all_data[symbol].copy()
 
-    print("Comment out following block of code when moving to production: set_up_data()")
+    print(
+        "Comment out following block of code when moving to production: set_up_data()"
+    )
     path = "/home/ihechi/Documents/Datasheets_and_Datasets/crypto/Bot/"
     pkl_file = open(path + symbol + ".pkl", "rb")
     dataset = pickle.load(pkl_file)
@@ -921,7 +937,9 @@ def get_results(symbols_list, intervals, strategies):
     # download_symbols(symbols_intervals)
 
     # multi_thread_download(symbols_intervals)
-    print("Using Local data, uncomment above line of code when moving to production: get_results()")
+    print(
+        "Using Local data, uncomment above line of code when moving to production: get_results()"
+    )
 
     print("Setting up: ")  # check
     set_up_all_data(symbols_intervals)

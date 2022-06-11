@@ -1,4 +1,13 @@
-from flask import Flask, request, jsonify
+from threading import Lock
+from flask import (
+    Flask,
+    render_template,
+    session,
+    request,
+    copy_current_request_context,
+    jsonify,
+)
+from flask_socketio import SocketIO, emit, disconnect
 from flask_cors import CORS
 from sqlite3 import Connection as SQLite3Connection
 from datetime import datetime
@@ -6,12 +15,21 @@ from sqlalchemy import event, JSON, ARRAY
 from sqlalchemy.engine import Engine
 from flask_sqlalchemy import SQLAlchemy
 import time
+import app.helpers as helpers
+
+from app.prediction_engine.main_engine import get_results
 
 app = Flask(__name__)
 CORS(app)
 
+
+app.config["SECRET_KEY"] = "secret!"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlitedb.file"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = 0
+
+socketio = SocketIO(app, cors_allowed_origins="*")
+thread = None
+thread_lock = Lock()
 
 # configure sqlite3 to enforce foreign key constraints
 @event.listens_for(Engine, "connect")
@@ -34,6 +52,7 @@ class Prediction(db.Model):
     date_created = db.Column(db.DateTime)
     data = db.Column(JSON)
 
+
 class Backtest(db.Model):
     __tablename__ = "Backtest"
     id = db.Column(db.Integer, primary_key=True)
@@ -53,117 +72,83 @@ class Backtest(db.Model):
     trade_percentage_expectancy = db.Column(db.Float)
     profit_factor = db.Column(db.Float)
 
+
+def background_thread():
+    count = 1
+    print("*****" * 5)
+    print("Counting", count)
+    print("*****" * 5)
+    while True:
+        # Calculate time to nearest hr as the data should refresh every hr.
+        minutes_to_nearest_hour = helpers.get_minutes_to_nearest_hr()
+
+        # Socketio sleeps for as long as required
+        # for i in range(minutes_to_nearest_hour * 6):
+        socketio.sleep(10)
+
+        print("Starting now: ", datetime.now())
+
+        # Generate new data every hr
+        # helpers.generate_data()
+
+        # get the data generated from the database
+        all_predictions = helpers.get_database_data("Prediction")
+        all_backtests = helpers.get_database_data("Backtest")
+
+        # Emit Data 
+        socketio.emit("predictions", {"data": all_predictions, "count": count})
+        socketio.emit("backtests", {"data": all_backtests, "count": count})
+        count += 1
+
+
+# Flask Routes
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
 @app.route("/predictions", methods=["GET"])
 def get_predictions():
-    print("Getting Predictions")
-    predictions = Prediction.query.all()
-    return_list = []
-    print(predictions)
-    for prediction in predictions:
-        return_list.append(
-            {
-                "id": prediction.id,
-                "symbol": prediction.symbol,
-                "data": prediction.data,
-                "date_created": prediction.date_created,
-            }
-        )
+    return_list = helpers.get_database_data("Prediction")
     return jsonify(return_list), 200
 
 
 @app.route("/backtests", methods=["GET"])
 def get_backtests():
-    backtests = Backtest.query.all()
-    return_list = []
-    for backtest in backtests:
-        return_list.append(
-            {
-                "id": backtest.id,
-                "date_created": backtest.date_created,
-                "symbol": backtest.symbol,
-                "symbol_strategy": backtest.symbol_strategy,
-                "strategy": backtest.strategy,
-                "start_date": backtest.start_date,
-                "end_date": backtest.end_date,
-                "percentage_returns": backtest.percentage_returns,
-                "percentage_buy_and_hold_return": backtest.percentage_buy_and_hold_return,
-                "maximum_drawdown": backtest.maximum_drawdown,
-                "maximum_drawdown_duration": backtest.maximum_drawdown_duration,
-                "num_trades": backtest.num_trades,
-                "win_rate": backtest.win_rate,
-                "trade_percentage_expectancy": backtest.trade_percentage_expectancy,
-                "profit_factor": backtest.profit_factor,
-                "percentage_exposure_time": backtest.percentage_exposure_time,
-            }
-        )
+    return_list = helpers.get_database_data("Backtest")
     return jsonify(return_list), 200
 
 
 @app.route("/predictions/<symbol>", methods=["GET"])
 def get_prediction(symbol):
-    predictions = Prediction.query.all()
-    return_list = []
-    for prediction in predictions:
-        if prediction.symbol == symbol:
-            return_list.append(
-                {
-                    "id": prediction.id,
-                    "symbol": prediction.symbol,
-                    "data": prediction.data,
-                    "date_created": prediction.date_created,
-                }
-            )
+    return_list = helpers.get_database_data("Prediction", symbol)
     prediction = return_list[0] if len(return_list) else None
     return jsonify(prediction), 200
 
 
 @app.route("/backtests/<symbol_strategy>", methods=["GET"])
 def get_backtest(symbol_strategy):
-    backtests = Backtest.query.all()
-    return_list = []
-    for backtest in backtests:
-        if backtest.symbol_strategy == symbol_strategy:
-            return_list.append(
-                {
-                    "id": backtest.id,
-                    "date_created": backtest.date_created,
-                    "symbol": backtest.symbol,
-                    "symbol_strategy": backtest.symbol_strategy,
-                    "strategy": backtest.strategy,
-                    "start_date": backtest.start_date,
-                    "end_date": backtest.end_date,
-                    "percentage_returns": backtest.percentage_returns,
-                    "percentage_buy_and_hold_return": backtest.percentage_buy_and_hold_return,
-                    "maximum_drawdown": backtest.maximum_drawdown,
-                    "maximum_drawdown_duration": backtest.maximum_drawdown_duration,
-                    "num_trades": backtest.num_trades,
-                    "win_rate": backtest.win_rate,
-                    "trade_percentage_expectancy": backtest.trade_percentage_expectancy,
-                    "profit_factor": backtest.profit_factor,
-                    "percentage_exposure_time": backtest.percentage_exposure_time,
-                }
-            )
-
+    return_list = helpers.get_database_data("Backtest", symbol_strategy)
     backtest = return_list[0] if len(return_list) else None
     return jsonify(backtest), 200
 
 
-@app.route("/names", methods=["GET"])
-def get_names():
-    print("Getting Names")
-    predictions = Users.query.all()
-    return_list = []
-    print(predictions)
-    for prediction in predictions:
-        return_list.append(
-            {
-                "id": prediction.index,
-                "name": prediction.name,
-            }
-        )
-    return jsonify(return_list), 200
+# Socket IO Events
 
 
-if __name__ == "__main__":
-    print("Running Main")
-    app.run(debug=True)
+@socketio.event
+def connect():
+    print("Client Connected", request)
+    typ = request.args.get("type")
+    global thread
+    with thread_lock:
+        if thread is None:
+            thread = socketio.start_background_task(background_thread)
+
+    emit("connect_success", {"data": "Connected"})
+
+
+@socketio.on("disconnect")
+def test_disconnect():
+    print("Client disconnected", request.sid)
+    disconnect()

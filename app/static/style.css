@@ -1,0 +1,55 @@
+/* https://flask.palletsprojects.com/en/2.1.x/tutorial/static/ */
+.entirePage {
+  width: 80%;
+  margin: auto;
+  text-align: center;
+}
+
+.animate {
+  border: 1.5rem solid;
+  border-color: white;
+  border-radius: 50%;
+  width: 3rem;
+  height: 3rem;
+  box-shadow: 0 0 0 20px #222;
+  margin: auto;
+
+  -webkit-animation-name: change-border-color; /* Safari 4.0 - 8.0 */
+  -webkit-animation-duration: 4s; /* Safari 4.0 - 8.0 */
+  -webkit-animation-iteration-count: infinite;
+  animation-name: change-border-color;
+  animation-duration: 4s;
+  animation-iteration-count: infinite;
+}
+
+/* Safari 4.0 - 8.0 */
+@-webkit-keyframes change-border-color {
+  0% {
+    border-color: red;
+  }
+  25% {
+    border-color: yellow;
+  }
+  50% {
+    border-color: blue;
+  }
+  100% {
+    border-color: green;
+  }
+}
+
+/* Standard syntax */
+@keyframes change-border-color {
+  0% {
+    border-color: red;
+  }
+  25% {
+    border-color: yellow;
+  }
+  50% {
+    border-color: blue;
+  }
+  100% {
+    border-color: green;
+  }
+}
