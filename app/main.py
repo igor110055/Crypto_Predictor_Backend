@@ -17,8 +17,6 @@ from flask_sqlalchemy import SQLAlchemy
 import time
 import app.helpers as helpers
 
-from app.prediction_engine.main_engine import get_results
-
 app = Flask(__name__)
 CORS(app)
 
@@ -74,28 +72,30 @@ class Backtest(db.Model):
 
 
 def background_thread():
-    count = 1
-    print("*****" * 5)
-    print("Counting", count)
-    print("*****" * 5)
+    count = 1 # Starts counting from 2 as the connect event sends count 1
+
     while True:
         # Calculate time to nearest hr as the data should refresh every hr.
         minutes_to_nearest_hour = helpers.get_minutes_to_nearest_hr()
 
+        print("Minutes to nearest hr: ", minutes_to_nearest_hour)
         # Socketio sleeps for as long as required
         # for i in range(minutes_to_nearest_hour * 6):
-        socketio.sleep(10)
-
+        socketio.sleep(60)
+        # socketio.emit("predictions", {"data": "all_predictions", "count": count})
+        # for i in range(3):
+        #     print("Hello people")
+        #     time.sleep(10)
         print("Starting now: ", datetime.now())
 
-        # Generate new data every hr
-        # helpers.generate_data()
+        # # Generate new data every hr
+        # helpers.generate_data() // this will be taken to a scheduler and not here as it blocks other events from operating.
 
-        # get the data generated from the database
+        # # get the data generated from the database
         all_predictions = helpers.get_database_data("Prediction")
         all_backtests = helpers.get_database_data("Backtest")
 
-        # Emit Data 
+        # # Emit Data 
         socketio.emit("predictions", {"data": all_predictions, "count": count})
         socketio.emit("backtests", {"data": all_backtests, "count": count})
         count += 1
@@ -134,8 +134,6 @@ def get_backtest(symbol_strategy):
 
 
 # Socket IO Events
-
-
 @socketio.event
 def connect():
     print("Client Connected", request)
@@ -144,11 +142,26 @@ def connect():
     with thread_lock:
         if thread is None:
             thread = socketio.start_background_task(background_thread)
+    emit('connect_success', {"data": "Connected Successfully"})
 
-    emit("connect_success", {"data": "Connected"})
-
+@socketio.on("request_present_data")
+def send_present_data(message):
+    '''Emit current database data with a count of -1 to show that it is not inline with the count of background_thread()'''
+    print("Present Data Requested", message)
+    count = -1
+    try:
+        all_predictions = helpers.get_database_data("Prediction")
+        all_backtests = helpers.get_database_data("Backtest")
+    except:
+        # sqlite3.OperationalError when the sqlite table is not existent
+        all_predictions = None
+        all_backtests = None
+        
+    emit("predictions", {"data": all_predictions, "count": count})
+    emit("backtests", {"data": all_backtests, "count": count})
 
 @socketio.on("disconnect")
 def test_disconnect():
     print("Client disconnected", request.sid)
     disconnect()
+

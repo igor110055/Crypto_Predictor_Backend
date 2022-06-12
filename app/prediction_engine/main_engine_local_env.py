@@ -25,6 +25,9 @@ base_api = "https://api.binance.com"
 all_data = {}
 exchange_data = ""
 
+# Due to some local file requirements in dev environment, this will be used for running the development
+print("Running Dev mode")
+
 # All : future work should take speed of executions into account, future work, in itself, can also be to speed up execution time
 # future work: use https://github.com/binance/binance-connector-python library and ta
 
@@ -404,8 +407,22 @@ def multi_thread_download(my_symbols):
 
 def set_up_data(symbol, vwap=1, win=24):
     """Sets up data table to be used for predictions with default values"""
-    global all_data
-    dataset = all_data[symbol].copy()
+    print(
+        "Uncomment the following block of code when moving to production: set_up_data()"
+    )
+    # global all_data
+    # dataset = all_data[symbol].copy()
+
+    print(
+        "Comment out following block of code when moving to production: set_up_data()"
+    )
+    path = "/home/ihechi/Documents/Datasheets_and_Datasets/crypto/Bot/"
+    pkl_file = open(path + symbol + ".pkl", "rb")
+    dataset = pickle.load(pkl_file)
+    pkl_file.close()
+
+    dataset["open_time"] = pd.to_datetime(dataset["openTime"])
+    print("comment out the above line when moving to production: set_up_data()")
 
     dataset["open_time_index"] = pd.to_datetime(dataset["open_time"])
     dataset["open_time"] = pd.to_datetime(dataset["open_time"])
@@ -922,7 +939,10 @@ def get_results(symbols_list, intervals, strategies):
 
     # download_symbols(symbols_intervals)
 
-    multi_thread_download(symbols_intervals)
+    # multi_thread_download(symbols_intervals)
+    print(
+        "Using Local data, uncomment above line of code when moving to production: get_results()"
+    )
 
     print("Setting up: ")  # check
     set_up_all_data(symbols_intervals)

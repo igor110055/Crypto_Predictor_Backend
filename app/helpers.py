@@ -35,8 +35,9 @@ dataset_num = 300  # Number of Prediction Data points to send to database. Curre
 def generate_data() -> None:
     """Generates and saves prediction and backtest data to the database."""
     print("Generating New data")
+    print("Running in Production mode. To run in dev mode, please use 'from app.prediction_engine.main_engine_local_env import get_results' instead of 'from app.prediction_engine.main_engine import get_results'")
     results, calculated_data = get_results(
-        symbols_list[:3], intervals[:1], strategies[:1]
+        symbols_list[:3], intervals[:2], strategies[:1]
     )  # check
 
     # Drop existing data and create new tables so the database only contains fresh values
