@@ -37,6 +37,9 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.execute("PRAGMA foreign_keys=ON;")
         cursor.close()
 
+# Hold ids of all connected clients
+request_ids = []
+active = True
 
 # create database instance
 db = SQLAlchemy(app)
@@ -74,19 +77,19 @@ class Backtest(db.Model):
 def background_thread():
     count = 1 # Starts counting from 2 as the connect event sends count 1
 
-    while True:
+    while active:
         # Calculate time to nearest hr as the data should refresh every hr.
         minutes_to_nearest_hour = helpers.get_minutes_to_nearest_hr()
+        generate_data_execution_time = 15
 
-        print("Minutes to nearest hr: ", minutes_to_nearest_hour)
+        print("Minutes to next execution: ", minutes_to_nearest_hour + generate_data_execution_time)
         # Socketio sleeps for as long as required
-        # for i in range(minutes_to_nearest_hour * 6):
-        socketio.sleep(60)
-        # socketio.emit("predictions", {"data": "all_predictions", "count": count})
-        # for i in range(3):
-        #     print("Hello people")
-        #     time.sleep(10)
-        print("Starting now: ", datetime.now())
+
+        for i in range((minutes_to_nearest_hour + generate_data_execution_time) * 6):
+            socketio.sleep(10)
+            # since helpers.generate_data() will be handled by a scheduler, it would make sense to add some more minutes to minutes_to_nearest_hour to offset the time taken for helpers.generate_data() to run. if, somehow, i figure out a way to run helpers.generate_data() without blocking other operations, i will remove the offset(generate_data_execution_time). currently, helpers.generate_data takes 15 minutes to run.
+
+        print("Sending new data: ", datetime.now())
 
         # # Generate new data every hr
         # helpers.generate_data() // this will be taken to a scheduler and not here as it blocks other events from operating.
@@ -132,17 +135,21 @@ def get_backtest(symbol_strategy):
     backtest = return_list[0] if len(return_list) else None
     return jsonify(backtest), 200
 
-
 # Socket IO Events
 @socketio.event
 def connect():
-    print("Client Connected", request)
+    global request_ids, active
+    print("Client Connecting...", request, request_ids)
+    if request.sid not in request_ids:
+        request_ids.append(request.sid)
+    active = True
     typ = request.args.get("type")
     global thread
     with thread_lock:
         if thread is None:
             thread = socketio.start_background_task(background_thread)
     emit('connect_success', {"data": "Connected Successfully"})
+    print("Client Connected", request, request_ids)
 
 @socketio.on("request_present_data")
 def send_present_data(message):
@@ -162,6 +169,9 @@ def send_present_data(message):
 
 @socketio.on("disconnect")
 def test_disconnect():
-    print("Client disconnected", request.sid)
+    global request_ids, active
+    print("Client disconnecting...", request.sid, request_ids)
     disconnect()
-
+    request_ids.remove(request.sid)
+    active = True if len(request_ids) else False # background_thread will keep running as long as there is a connected client
+    print("Client disconnected", request.sid, request_ids, active)
