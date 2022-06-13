@@ -81,13 +81,14 @@ def background_thread():
         # Calculate time to nearest hr as the data should refresh every hr.
         minutes_to_nearest_hour = helpers.get_minutes_to_nearest_hr()
         generate_data_execution_time = 15
+        grace_period = 5
 
         print("Minutes to next execution: ", minutes_to_nearest_hour + generate_data_execution_time)
         # Socketio sleeps for as long as required
 
-        for i in range((minutes_to_nearest_hour + generate_data_execution_time) * 6):
+        for i in range((minutes_to_nearest_hour + generate_data_execution_time + grace_period) * 6):
             socketio.sleep(10)
-            # since helpers.generate_data() will be handled by a scheduler, it would make sense to add some more minutes to minutes_to_nearest_hour to offset the time taken for helpers.generate_data() to run. if, somehow, i figure out a way to run helpers.generate_data() without blocking other operations, i will remove the offset(generate_data_execution_time). currently, helpers.generate_data takes 15 minutes to run.
+            # since helpers.generate_data() will be handled by a scheduler, it would make sense to add some more minutes to minutes_to_nearest_hour to offset the time taken for helpers.generate_data() to run. if, somehow, i figure out a way to run helpers.generate_data() without blocking other operations, i will remove the offset(generate_data_execution_time). currently, helpers.generate_data takes 15 minutes to run. It also has a grace period of 5 minutes just incase data generation takes more than 15 minutes. Write for test cases where the data may take more than 15 minutes to generate. This is pending when we make our algorithm faster.
 
         print("Sending new data: ", datetime.now())
 

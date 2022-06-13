@@ -3,6 +3,10 @@
   width: 80%;
   margin: auto;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 95vh;
 }
 
 .animate {
@@ -26,15 +30,19 @@
 @-webkit-keyframes change-border-color {
   0% {
     border-color: red;
+    background-color: red;
   }
   25% {
     border-color: yellow;
+    background-color: blue;
   }
   50% {
     border-color: blue;
+    background-color: yellow;
   }
   100% {
     border-color: green;
+    background-color: green;
   }
 }
 
@@ -42,14 +50,18 @@
 @keyframes change-border-color {
   0% {
     border-color: red;
+    background-color: green;
   }
   25% {
     border-color: yellow;
+    background-color: blue;
   }
   50% {
     border-color: blue;
+    background-color: yellow;
   }
   100% {
     border-color: green;
+    background-color: red;
   }
 }

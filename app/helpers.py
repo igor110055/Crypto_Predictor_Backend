@@ -37,7 +37,7 @@ def generate_data() -> None:
     print("Generating New data")
     print("Running in Production mode. To run in dev mode, please use 'from app.prediction_engine.main_engine_local_env import get_results' instead of 'from app.prediction_engine.main_engine import get_results'")
     results, calculated_data = get_results(
-        symbols_list[:3], intervals[:2], strategies[:1]
+        symbols_list[:], intervals[:], strategies[:]
     )  # check
 
     # Drop existing data and create new tables so the database only contains fresh values
