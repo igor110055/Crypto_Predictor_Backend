@@ -28,6 +28,10 @@ exchange_data = ""
 # All : future work should take speed of executions into account, future work, in itself, can also be to speed up execution time
 # future work: use https://github.com/binance/binance-connector-python library and ta
 
+# ----------------------------------------------------------------------------
+# Read on 'memoization and using caches' to make your code faster!
+# ----------------------------------------------------------------------------
+
 # General Functions
 def get_symbol_interval(symbol: str):
     """Given a 'symbol' eg -> 'BTCUSDT1h'
@@ -346,7 +350,7 @@ def get_klines(symbol, interval, limit=1000):
     if (not res) or (res.status_code != 200):
         print("An Error Occured")
         sys.exit(-1)  # change sys exit to -> return { "data": "FAILED GET")
-    print(symbol, " downloaded, now saving...")
+    print(symbol, interval, " downloaded, now saving...")
     dataset = pd.DataFrame(
         res.json(),
         columns=[
@@ -764,6 +768,12 @@ def calc_all(symbol, stop, kijun, fai=0.0011, vwap=None, win=14, new=0):
             "open",
             "trend_aroon_up",
             "trend_aroon_down",
+            "atr2",
+            "fast_ma",
+            "macd",
+            "macd_signal", 
+            "psar",
+            "slow_ma"
         ],
         axis=1,
         inplace=True,

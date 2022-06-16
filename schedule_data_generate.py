@@ -14,6 +14,6 @@ if __name__ == "__main__":
         time.sleep(10)
 
     start = datetime.now()
-    generate_data()
+    generate_data() # Read on 'memoization and using caches' to make your code faster!
     end = datetime.now()
     print("Took: ", end - start)

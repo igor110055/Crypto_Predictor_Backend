@@ -83,7 +83,7 @@ def background_thread():
         generate_data_execution_time = 15
         grace_period = 5
 
-        print("Minutes to next execution: ", minutes_to_nearest_hour + generate_data_execution_time)
+        print("Minutes to next execution: ", minutes_to_nearest_hour + generate_data_execution_time + grace_period)
         # Socketio sleeps for as long as required
 
         for i in range((minutes_to_nearest_hour + generate_data_execution_time + grace_period) * 6):
@@ -139,16 +139,18 @@ def get_backtest(symbol_strategy):
 # Socket IO Events
 @socketio.event
 def connect():
-    global request_ids, active
+    global request_ids, active, thread
     print("Client Connecting...", request, request_ids)
     if request.sid not in request_ids:
         request_ids.append(request.sid)
     active = True
-    typ = request.args.get("type")
-    global thread
+    print(thread, "First Thread")
+    print("---" * 18)
     with thread_lock:
         if thread is None:
             thread = socketio.start_background_task(background_thread)
+            print(thread, "Thread")
+            print("---" * 18)
     emit('connect_success', {"data": "Connected Successfully"})
     print("Client Connected", request, request_ids)
 
@@ -170,7 +172,7 @@ def send_present_data(message):
 
 @socketio.on("disconnect")
 def test_disconnect():
-    global request_ids, active
+    global request_ids, active, thread
     print("Client disconnecting...", request.sid, request_ids)
     disconnect()
     request_ids.remove(request.sid)
