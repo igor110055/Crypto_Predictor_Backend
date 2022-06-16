@@ -8,7 +8,7 @@ Built for [this crypto predictor website](https://github.com/The-Professor99/Cry
 
 This project can be installed by running the following commands in your preferred directory.
 
-    $ git clone https://github.com/The-Professor99/Music_Downloader.git
+    $ git clone https://github.com/The-Professor99/Crypto_Predictor_Backend.git
 
 ## Requirements
 
