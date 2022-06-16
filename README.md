@@ -33,26 +33,37 @@ Run the below command to start up the project
 Test data has already been generated, to generate new data, simply run
 
     $ python schedule_data_generate.py
-    - However, do not that this only generates data at intervals of 9:02am, 10:02am, 11:02am and so on...
+
+- However, do note that this only generates data at intervals of 9:02am, 10:02am, 11:02am and so on...
 
 ## Issues to work on:
 
 - Check the Issues tab
-- Optimizing the algorithm( main_engine.py ) for faster executions
+- Optimizing the algorithm [housed here](./app/prediction_engine/main_engine.py) for faster executions
 
 ## Current Progess:
 
-The current state of the API can be seen through the following routes.
+The current state of the API can be seen through the following routes. [Please ensure that the server is running](#how-to-use) before visiting the following routes.
 
-- [View Predictions](https://get-crypto-predicts.herokuapp.com/predictions)
-- [View Backtests](https://get-crypto-predicts.herokuapp.com/backtests)
-- [View Predictions for a particular symbol](https://get-crypto-predicts.herokuapp.com/predictions/BTCUSDT1h)
+Routes
+
+- [View Predictions](http://localhost:5000/predictions)
+- [View Backtests](http://localhost:5000/backtests)
+- [View Predictions for a particular symbol](http://localhost:5000/predictions/BTCUSDT1h)
   - Symbol name here is in form of 'symbol' + 'interval'
-- [View Backtest Results for a particular strategy](https://get-crypto-predicts.herokuapp.com/backtests/BTCUSDT1h_PositionMACD)
-
+- [View Backtest Results for a particular strategy](http://localhost:5000/backtests/BTCUSDT1h_PositionMACD)
   - Strategy name here is in form of 'symbol' + 'interval' + '\_' + 'strategy'
 
-- SocketIO connection is now supported. Please go through [this file](./app/main.py) for socket events currently supported pending when a proper documentation is made.
+Example:
+To view an example of what the server returns without running it on a local dev environment, visit:
+
+- [View Predictions for a particular symbol](https://get-crypto-predicts.herokuapp.com/predictions/BTCUSDT1h)
+
+  - Symbol name here is in form of 'symbol' + 'interval'
+  - Do note, however, that the herokuapp version currently deployed is outdated and may not have the same results as that of running a dev server.
+  - The routes above can also be accessed through [this herokuapp link](https://get-crypto-predicts.herokuapp.com/)
+
+- SocketIO connection is now supported. [Please go through this file](./app/main.py) for socket events currently supported pending when a proper documentation is made.
 
 ## Symbols currently supported:
 
@@ -73,4 +84,4 @@ The current state of the API can be seen through the following routes.
 ## Disclaimer
 
 The project is highly experimental and purely for learning/practise purposes.
-You are entirely liable for any financial loss resulting from the use of this project.
+You are entirely liable for any financial loss resulting from the use of this project for financial decisions.
